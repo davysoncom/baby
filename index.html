@@ -4,33 +4,54 @@
     <meta charset="UTF-8" />
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <link rel="shortcut icon" href="./assets/img/fabicon-flying-stork.png" type="image/x-icon">
-    
+    <link
+      rel="shortcut icon"
+      href="./assets/img/fabicon-flying-stork.png"
+      type="image/x-icon"
+    />
+
     <title>A New Arrival</title>
     <link rel="stylesheet" href="./assets/build.css" />
   </head>
   <body>
     <header
-      class="fade-in bg-primary py-12 px-5 sm:px-10 lg:px-16 min-h-screen md:max-h-screen h-full flex flex-col items-center justify-center md:flex-row gap-12"
+      class="fade-in bg-primary py-12 px-2 sm:px-10 lg:px-16 min-h-screen md:max-h-screen h-full flex flex-col items-center justify-center md:flex-row gap-12"
     >
-      <div class="w-3/5 border-[10px] border-white">
-        <img
-          src="./assets/img/hero.jpeg"
-          class="w-full h-full object-cover"
-          alt=""
-        />
+      <div class="w-full md:w-3/5">
+        <div class="md:hidden">
+          <h1
+            class="text-center text-white font-medium tracking-wider mb-5 text-8xl"
+          >
+            Leah
+          </h1>
+          <h4
+            class="text-center text-white font-normal tracking-wider text-2xl mb-3"
+          >
+            Elodie Davyson
+          </h4>
+        </div>
+
+        <div class="w-full border-4 md:border-[10px] border-white">
+          <img
+            src="./assets/img/hero.jpeg"
+            class="w-full h-full object-cover"
+            alt=""
+          />
+        </div>
       </div>
-      <div class="md:w-2/5 flex flex-col items-center justify-center">
-        <h1
-          class="text-center text-white font-medium tracking-wider mb-5 text-2xl lg:text-7xl xl:text-[120px]"
-        >
-          Leah
-        </h1>
-        <h4
-          class="text-center text-white font-normal tracking-wider text-xl lg:text-4xl mb-10"
-        >
-          Elodie Davyson
-        </h4>
+      <div class="w-full md:w-2/5 flex flex-col items-center justify-center">
+        <div class="hidden md:block">
+          <h1
+            class="text-center text-white font-medium tracking-wider mb-5 text-7xl xl:text-[120px]"
+          >
+            Leah
+          </h1>
+          <h4
+            class="text-center text-white font-normal tracking-wider text-xl lg:text-4xl mb-10"
+          >
+            Elodie Davyson
+          </h4>
+        </div>
 
         <p class="text-white text-lg lg:text-2xl mt-10">18.11.2021 3:09 am</p>
         <p class="text-white text-lg lg:text-2xl mt-3">6lbs 15oz - 3.14 kg</p>
@@ -46,7 +67,9 @@
             alt=""
           />
         </div>
-        <p class="mt-10 text-lg md:text-xl lg:text-2xl text-primary text-center">
+        <p
+          class="mt-10 text-lg md:text-xl lg:text-2xl text-primary text-center"
+        >
           Route de l'Uche 45A, 1255 Veyrier, Switzerland
         </p>
       </div>
@@ -58,7 +81,9 @@
             alt=""
           />
         </div>
-        <p class="mt-10 text-lg md:text-xl lg:text-2xl text-primary text-center">
+        <p
+          class="mt-10 text-lg md:text-xl lg:text-2xl text-primary text-center"
+        >
           <a href="mailto:45a@davyson.com">45a@davyson.com</a>
         </p>
       </div>

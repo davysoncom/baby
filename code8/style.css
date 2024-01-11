@@ -99,4 +99,13 @@ body {
     font-size: 50pt;
 }
 
+.first-name {
+    font-size:50pt;
+    clear:both;
+}
+.middle-last-name {
+    font-size:50pt;
+    clear:both;
+}
+
 }

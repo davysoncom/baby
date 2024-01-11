@@ -38,6 +38,7 @@ body {
     margin:0px;
     scroll-snap-type: y mandatory;
     overflow: auto;
+    cursor: pointer;
     /*height:100vh;
     /*scroll-snap-align: center;
     scroll-snap-stop: always;*/
@@ -84,10 +85,12 @@ body {
 .first-name {
     font-size:180pt;
     clear:both;
+    cursor: pointer;
 }
 .middle-last-name {
     font-size:100pt;
     clear:both;
+    cursor: pointer;
 }
 .details {
     display:none;
@@ -97,15 +100,18 @@ body {
 
 body {
     font-size: 50pt;
+    cursor: pointer;
 }
 
 .first-name {
     font-size:50pt;
     clear:both;
+    cursor: pointer;
 }
 .middle-last-name {
     font-size:50pt;
     clear:both;
+    cursor: pointer;
 }
 
 }

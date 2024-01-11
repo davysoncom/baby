@@ -1,0 +1,98 @@
+body {
+    background-color: rgb(66, 137, 236);
+    color: rgba(255, 255, 255, 0.845);
+    font-family: Helvetica;
+    font-size: 80pt;
+    padding:0px;
+    margin:0px;
+    cursor: pointer;
+    height: 100%;
+    overflow: hidden;
+}
+.content {
+    text-align: center;
+    justify-content: center;
+    align-items: center;
+    display: flex;
+    height: 100vh;
+}
+.slide {
+    height: 100vh;
+    display:flex;
+    align-items: center;
+    justify-content: center;
+    width:100vw;
+    scroll-snap-align: center;
+    flex:1;
+    flex-direction: column;
+}
+.main {
+    display:flex;
+    flex-flow: column;
+    align-items: center;
+    flex-direction: column;
+    justify-content: center;
+    padding:0px;
+    margin:0px;
+    scroll-snap-type: y mandatory;
+    overflow: auto;
+    /*height:100vh;
+    /*scroll-snap-align: center;
+    scroll-snap-stop: always;*/
+}
+.main > div {
+    scroll-snap-align: center;
+}
+#progress-bar-background {
+    position:fixed;
+    margin-top:5px;
+    width:100%;
+    height:5px;
+    background-color: rgb(66, 137, 236);
+    z-index:98;
+}
+#progress-bar {
+    position:fixed;
+    margin-top:5px;
+    /*width:25%;*/
+    height:5px;
+    background-color: white;
+    z-index:99;
+}
+#progress-markers {
+    margin-top:5px;
+    position:fixed;
+    display:flex;
+    flex-direction: row;
+    z-index:100;
+    width:100%;
+    flex:1;
+    align-items: center;
+    justify-content: center;
+}
+.progress-marker-zone {
+    height:5px;
+    width:25%;
+}
+.progress-marker {
+    width:3px;
+    background-color: rgb(66, 137, 236);
+    height:5px;
+}
+.first-name {
+    font-size:180pt;
+    clear:both;
+}
+.middle-last-name {
+    font-size:100pt;
+    clear:both;
+}
+.details {
+    display:none;
+}
+@media only screen and (max-width: 768px) {
+/* mobile styles go here */
+
+
+
+}

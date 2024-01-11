@@ -93,6 +93,8 @@ body {
 @media only screen and (max-width: 768px) {
 /* mobile styles go here */
 
-
+body {
+    font-size: 50pt;
+}
 
 }

@@ -57,12 +57,13 @@ body {
 @media only screen and (min-width: 1000px) { 
 
     .primary-image {
-        height:80vh;
+        height:84vh;
+        width:64vh;
         /*border:20px solid var(--light-color);*/
-        object-fit: contain;
+        border-radius: 20px;
     }
 
-    .primary-image-container {
+    .primary-image-section {
         display:flex;
         flex-direction: column;
         flex-grow:1;
@@ -76,15 +77,31 @@ body {
     }
     .middle-last-name {
         font-family: 'Nunito', sans-serif;
-        font-size: 4vw;
+        font-size: 3.5vw;
         margin-top:-50px;
         color: var(--light-color);
     }
 
-    .name-container {
+    .time {
+        font-family: 'Nunito', sans-serif;
+        font-size: 2vw;
+        color: var(--light-color);
+    }
+
+    .weight {
+        font-family: 'Nunito', sans-serif;
+        font-size: 2vw;
+        color: var(--light-color);
+    }
+
+    .name-and-details-section {
      display:flex;
      flex-direction: column;
      flex-grow: 1;
+    }
+
+    .details-section {
+        margin-top: 50px;
     }
 
     #frame1 {

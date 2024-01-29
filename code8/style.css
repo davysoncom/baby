@@ -8,6 +8,7 @@ body {
     cursor: pointer;
     height: 100%;
     overflow: hidden;
+    user-select: none;
 }
 .content {
     text-align: center;
@@ -16,6 +17,7 @@ body {
     display: flex;
     height: 100vh;
     cursor: pointer;
+    user-select: none;
 }
 .slide {
     height: 100vh;
@@ -27,6 +29,7 @@ body {
     flex:1;
     flex-direction: column;
     cursor: pointer;
+    user-select: none;
 }
 .main {
     display:flex;
@@ -39,6 +42,7 @@ body {
     scroll-snap-type: y mandatory;
     overflow: auto;
     cursor: pointer;
+    user-select: none;
     /*height:100vh;
     /*scroll-snap-align: center;
     scroll-snap-stop: always;*/
@@ -101,17 +105,30 @@ body {
 body {
     font-size: 50pt;
     cursor: pointer;
+    user-select: none;
 }
 
 .first-name {
     font-size:50pt;
     clear:both;
     cursor: pointer;
+    user-select: none;
 }
 .middle-last-name {
     font-size:50pt;
     clear:both;
     cursor: pointer;
+    user-select: none;
 }
 
 }
+
+.noselect {
+    -webkit-touch-callout: none; /* iOS Safari */
+      -webkit-user-select: none; /* Safari */
+       -khtml-user-select: none; /* Konqueror HTML */
+         -moz-user-select: none; /* Old versions of Firefox */
+          -ms-user-select: none; /* Internet Explorer/Edge */
+              user-select: none; /* Non-prefixed version, currently
+                                    supported by Chrome, Edge, Opera and Firefox */
+  }

@@ -1,0 +1,245 @@
+@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@500&display=swap');
+
+
+:root {
+    --main-bg-color: rgb(61, 124, 199);
+    --light-color: rgb(210, 223, 241); 
+  }
+
+  body {
+    margin:0px;
+    padding: 0px;
+}
+
+.primary-image {
+    padding-top:50px;
+    height:75vh;
+    object-fit: cover;
+    /*border:20px solid var(--light-color);*/
+}
+
+.primary-image-section {
+    display:flex;
+    flex-direction: column;
+    flex-grow:0;
+    align-items: left;
+}
+
+.first-name {
+    font-family: 'Nunito', sans-serif;
+    font-size: 10vw;
+    color: var(--light-color);
+    align-items: center;
+    text-align: center;
+}
+.middle-last-name {
+    font-family: 'Nunito', sans-serif;
+    font-size: 2vw;
+    color: var(--light-color);
+    align-items: center;
+    text-align: center;
+}
+
+.time {
+    font-family: 'Nunito', sans-serif;
+    font-size: 2vw;
+    color: var(--light-color);
+    text-align: center;
+}
+
+.weight {
+    font-family: 'Nunito', sans-serif;
+    font-size: 2vw;
+    color: var(--light-color);
+    text-align: center;
+}
+
+.name-and-details-section {
+ display:flex;
+ flex-direction: column;
+ flex-grow: 1;
+ align-items: center;
+}
+
+.details-section {
+    margin-top: 10px;
+}
+
+#frame1 {
+    background-color: var(--main-bg-color);
+    height: 100vh;
+    padding:0px;
+    display:flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+}
+
+.contents {
+    padding:0px;
+    display:flex;
+    flex-direction: column;
+    width:100%;
+    align-items: center;
+    justify-content: center;
+    flex-grow: 1;
+}
+
+#frame2 {
+    background-color: white;
+    padding-top:50px;
+}
+
+.frame2contents {
+    display:flex;
+    width:100%;
+    flex-wrap:wrap;
+    align-items: center;
+    justify-content: center;
+}
+
+.galleryimage {
+    height:100vh;
+    object-fit: cover;
+    width:100%;
+    margin-top:50px;
+    margin-bottom:50px;
+}
+
+.p1 {
+    object-fit: contain;
+}
+.p2 {
+    object-fit: contain;
+}
+
+
+/* TABLETS etc */
+@media only screen and (min-width: 600px) {
+
+
+}
+
+
+
+
+/* DESKTOP */
+@media only screen and (min-width: 1000px) { 
+
+    body {
+        margin:0px;
+        padding: 0px;
+    }
+
+    .primary-image {
+        height:100vh;
+        width:75vh;
+        /*border:20px solid var(--light-color);*/
+    }
+
+    .primary-image-section {
+        display:flex;
+        flex-direction: column;
+        flex-grow:0;
+        align-items: left;
+    }
+
+    .first-name {
+        font-family: 'Nunito', sans-serif;
+        font-size: 16vw;
+        color: var(--light-color);
+        align-self: center;
+    }
+    .middle-last-name {
+        font-family: 'Nunito', sans-serif;
+        font-size: 3.5vw;
+        margin-top:-50px;
+        color: var(--light-color);
+        align-self: center;
+        text-align: center;
+    }
+
+    .time {
+        font-family: 'Nunito', sans-serif;
+        font-size: 2vw;
+        color: var(--light-color);
+        align-self: center;
+        text-align: center;
+    }
+
+    .weight {
+        font-family: 'Nunito', sans-serif;
+        font-size: 2vw;
+        color: var(--light-color);
+        align-self: center;
+        text-align: center;
+    }
+
+    .name-and-details-section {
+     display:flex;
+     flex-direction: column;
+     flex-grow: 1;
+     align-items: center;
+     justify-content: center;
+    }
+
+    .details-section {]
+        display:flex;
+        margin-top: 50px;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+    }
+
+    #frame1 {
+        background-color: var(--main-bg-color);
+        height: 100vh;
+        padding:0px;
+        display:flex;
+        align-items: center;
+        justify-content: center;
+        flex-direction: row;
+    }
+
+    .contents {
+        padding:0px;
+        display:flex;
+        flex-direction: row;
+        width:100%;
+        align-items: center;
+        justify-content: center;
+        flex-grow: 1;
+    }
+
+    #frame2 {
+        background-color: white;
+        padding-top:50px;
+    }
+
+    .frame2contents {
+        display:flex;
+        width:100%;
+        flex-wrap:wrap;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .galleryimage {
+        height:100vh;
+        object-fit: cover;
+        width:100%;
+        margin-top:50px;
+        margin-bottom:50px;
+    }
+
+    .p1 {
+        object-fit: contain;
+    }
+    .p2 {
+        object-fit: contain;
+    }
+   
+    
+   
+
+}

@@ -123,6 +123,23 @@ body {
         justify-content: center;
         flex-grow: 1;
     }
+
+    #frame2 {
+        background-color: var(--main-bg-color)
+    }
+
+    .frame2contents {
+        display:flex;
+        height:100vh;
+        width:100%;
+        flex-wrap:wrap;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .galleryimage {
+        height:50vh;
+    }
     
 
 }

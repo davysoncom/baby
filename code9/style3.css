@@ -109,16 +109,13 @@
     justify-content: center;
 }
 
-.galleryimage {
+.gimage {
     width:100%;
     margin-top:25px;
     margin-bottom:25px;
 }
 
-.p1 {
-    object-fit: contain;
-}
-.p2 {
+.port {
     object-fit: contain;
 }
 
@@ -234,7 +231,7 @@
         justify-content: center;
     }
 
-    .galleryimage {
+    .gimage {
         height:100vh;
         object-fit: cover;
         width:100%;
@@ -242,10 +239,7 @@
         margin-bottom:50px;
     }
 
-    .p1 {
-        object-fit: contain;
-    }
-    .p2 {
+    .port {
         object-fit: contain;
     }
    

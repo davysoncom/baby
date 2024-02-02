@@ -1,0 +1,145 @@
+@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@500&display=swap');
+
+
+:root {
+    --main-bg-color: rgb(61, 124, 199);
+    --light-color: rgb(210, 223, 241); 
+  }
+
+.primary-image {
+    width:90%;
+    /*border:20px solid var(--light-color);*/
+    border-radius: 20px;
+    object-fit: cover;
+}
+body {
+    text-align:center;
+    padding:0px;
+    background-color: var(--main-bg-color);
+}
+.first-name {
+    font-family: 'Nunito', sans-serif;
+    font-size: 280px;
+    color: var(--light-color);
+}
+.middle-last-name {
+    font-family: 'Nunito', sans-serif;
+    font-size: 80px;
+    margin-top:-50px;
+    color: var(--light-color);
+}
+#frame1 {
+    background-color: var(--main-bg-color);
+    height: 100%;
+    padding:50px;
+    display:flex;
+    align-items: center;
+    justify-content: center;
+}
+#frame2 {
+    background-color: var(--light-color);
+}
+.contents {
+    
+}
+
+
+/* TABLETS etc */
+@media only screen and (min-width: 600px) {
+
+
+}
+
+
+
+
+/* DESKTOP */
+@media only screen and (min-width: 1000px) { 
+
+    .primary-image {
+        height:84vh;
+        width:64vh;
+        /*border:20px solid var(--light-color);*/
+        border-radius: 20px;
+    }
+
+    .primary-image-section {
+        display:flex;
+        flex-direction: column;
+        flex-grow:1;
+        align-items: center;
+    }
+
+    .first-name {
+        font-family: 'Nunito', sans-serif;
+        font-size: 16vw;
+        color: var(--light-color);
+    }
+    .middle-last-name {
+        font-family: 'Nunito', sans-serif;
+        font-size: 3.5vw;
+        margin-top:-50px;
+        color: var(--light-color);
+    }
+
+    .time {
+        font-family: 'Nunito', sans-serif;
+        font-size: 2vw;
+        color: var(--light-color);
+    }
+
+    .weight {
+        font-family: 'Nunito', sans-serif;
+        font-size: 2vw;
+        color: var(--light-color);
+    }
+
+    .name-and-details-section {
+     display:flex;
+     flex-direction: column;
+     flex-grow: 1;
+    }
+
+    .details-section {
+        margin-top: 50px;
+    }
+
+    #frame1 {
+        background-color: var(--main-bg-color);
+        height: 100vh;
+        padding:0px;
+        display:flex;
+        align-items: center;
+        justify-content: center;
+        flex-direction: row;
+    }
+
+    .contents {
+        padding:50px;
+        display:flex;
+        flex-direction: row;
+        width:100%;
+        align-items: center;
+        justify-content: center;
+        flex-grow: 1;
+    }
+
+    #frame2 {
+        background-color: var(--main-bg-color)
+    }
+
+    .frame2contents {
+        display:flex;
+        height:100vh;
+        width:100%;
+        flex-wrap:wrap;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .galleryimage {
+        height:50vh;
+    }
+    
+
+}

@@ -12,7 +12,7 @@
 }
 
 .primary-image {
-    margin-top:50px;
+    margin-top:30px;
     height:65vh;
     object-fit: cover;
 }
@@ -40,6 +40,7 @@
     text-align: center;
     margin-top:-30px;
 }
+
 
 .time {
     font-family: 'Nunito', sans-serif;

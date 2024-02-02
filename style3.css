@@ -13,7 +13,7 @@
 
 .primary-image {
     margin-top:30px;
-    height:65vh;
+    height:60vh;
     object-fit: cover;
 }
 
@@ -34,7 +34,7 @@
 }
 .middle-last-name {
     font-family: 'Nunito', sans-serif;
-    font-size: 4.5vw;
+    font-size: 4.2vw;
     color: var(--light-color);
     align-items: center;
     text-align: center;
@@ -44,14 +44,14 @@
 
 .time {
     font-family: 'Nunito', sans-serif;
-    font-size: 3vw;
+    font-size: 2.8vw;
     color: var(--light-color);
     text-align: center;
 }
 
 .weight {
     font-family: 'Nunito', sans-serif;
-    font-size: 3vw;
+    font-size: 2.8vw;
     color: var(--light-color);
     text-align: center;
     margin-left: 20px;
@@ -74,7 +74,7 @@
 
 #frame1 {
     background-color: var(--main-bg-color);
-    height: 100vh;
+    height: 90vh;
     padding:0px;
     display:flex;
     align-items: center;

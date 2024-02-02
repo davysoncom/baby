@@ -103,7 +103,7 @@
 
 .frame2contents {
     display:flex;
-    width:75%;
+    width:85%;
     flex-wrap:wrap;
     align-items: center;
     justify-content: center;

@@ -58,10 +58,37 @@
     return path === "/" || /\/index\.html$/i.test(path);
   }
 
+  function setBooting(on) {
+    document.documentElement.classList.toggle("is-booting", Boolean(on));
+    if (on) window.scrollTo(0, 0);
+  }
+
   function showBlank() {
     if (comingSoon) comingSoon.hidden = true;
     if (announcement) announcement.hidden = true;
     document.title = "A New Arrival";
+    setBooting(false);
+  }
+
+  function waitForHeroImage() {
+    return new Promise((resolve) => {
+      let settled = false;
+      const finish = () => {
+        if (settled) return;
+        settled = true;
+        resolve();
+      };
+      if (heroImage.complete && heroImage.naturalWidth) {
+        finish();
+        return;
+      }
+      heroImage.addEventListener("load", finish, { once: true });
+      heroImage.addEventListener("error", finish, { once: true });
+      window.setTimeout(finish, 12000);
+      if (heroImage.decode) {
+        heroImage.decode().then(finish).catch(() => {});
+      }
+    });
   }
 
   function buildDetails(data) {
@@ -216,11 +243,11 @@
 
   /** @type {any[] | null} */
   let cachedGalleryPhotos = null;
-  let lastTrioPref = allowTrioLayout();
+  let lastMultiColumnPref = allowMultiColumnLayout();
 
   function paintGalleries(photos) {
     cachedGalleryPhotos = photos;
-    lastTrioPref = allowTrioLayout();
+    lastMultiColumnPref = allowMultiColumnLayout();
     prefetchPhotos(photos);
     const midpoint = Math.ceil(photos.length / 2);
     // Eager-load the first gallery; lazy only deep into the second half
@@ -241,6 +268,7 @@
     comingSoon.hidden = false;
     announcement.hidden = true;
     document.title = "A New Arrival";
+    setBooting(false);
   }
 
   const reduceMotionQuery = window.matchMedia(
@@ -557,6 +585,7 @@
 
   async function render(data, options) {
     const isDemo = Boolean(options && options.demo);
+    const isPreview = previewMode();
     assetVersion = (data && (data.updatedAt || data.v)) || "";
 
     // Root URL: blank until data.live (waits on GitHub Pages after admin save)
@@ -575,7 +604,13 @@
 
     announcementRevealed = true;
     comingSoon.hidden = true;
-    announcement.hidden = false;
+    // Stay blank + scroll-locked until the hero image is ready (not in admin preview).
+    if (!isPreview) {
+      setBooting(true);
+      announcement.hidden = true;
+    } else {
+      announcement.hidden = false;
+    }
 
     firstNameEl.textContent = data.firstName.trim();
     middleLastEl.textContent = String(data.middleLast || "").trim();
@@ -588,6 +623,11 @@
     heroMedia.classList.remove("is-empty", ...orientClasses);
     if (heroStage) heroStage.classList.remove(...orientClasses);
 
+    const photos = (data.photos || []).map(normalizePhoto).filter(Boolean);
+    // Prefetch gallery while waiting on the hero.
+    prefetchPhotos(photos);
+    const photosPromise = Promise.all(photos.map(ensureOrient));
+
     if (hero && hero.src) {
       const resolved = await ensureOrient(hero);
       const orient = resolved.orient || "portrait";
@@ -595,21 +635,9 @@
       if (heroStage) heroStage.classList.add("is-" + orient);
       heroImage.classList.remove("is-loaded");
       heroImage.alt = data.firstName.trim();
-      const markLoaded = () => {
-        heroImage.classList.add("is-loaded");
-        window.requestAnimationFrame(() => {
-          clearHeroScrubStyles();
-          clearHeroSlotSize();
-          ensureHeroSlotSize();
-          applyHeroScrub();
-        });
-      };
-      heroImage.onload = markLoaded;
       heroImage.src = resolved.src;
-      if (heroImage.complete && heroImage.naturalWidth) markLoaded();
-      else if (heroImage.decode) {
-        heroImage.decode().then(markLoaded).catch(() => {});
-      }
+      await waitForHeroImage();
+      heroImage.classList.add("is-loaded");
     } else {
       heroMedia.classList.add("is-empty");
       heroImage.removeAttribute("src");
@@ -618,11 +646,10 @@
       if (heroStage) heroStage.style.setProperty("--hero-progress", "1");
     }
 
-    const photos = (data.photos || []).map(normalizePhoto).filter(Boolean);
-    // Kick off downloads immediately (don't wait on orientation probes).
-    prefetchPhotos(photos);
+    announcement.hidden = false;
+    if (!isPreview) setBooting(false);
 
-    const resolvedPhotos = await Promise.all(photos.map(ensureOrient));
+    const resolvedPhotos = await photosPromise;
     paintGalleries(resolvedPhotos);
 
     window.requestAnimationFrame(() => {
@@ -635,8 +662,8 @@
 
   window.addEventListener("resize", () => {
     if (!cachedGalleryPhotos) return;
-    const trio = allowTrioLayout();
-    if (trio === lastTrioPref) return;
+    const multi = allowMultiColumnLayout();
+    if (multi === lastMultiColumnPref) return;
     paintGalleries(cachedGalleryPhotos);
   });
 
@@ -736,6 +763,7 @@
   const demo = demoMode();
   if (previewMode()) {
     document.documentElement.classList.add("is-preview");
+    setBooting(false);
     window.addEventListener("message", acceptPreviewMessage);
     if (window.parent && window.parent !== window) {
       window.parent.postMessage({ type: "baby-preview-ready" }, "*");

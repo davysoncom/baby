@@ -5,6 +5,8 @@
   const DATA_PATH = "announcement/data.json";
   const DATA_RAW_URL =
     "https://raw.githubusercontent.com/davysoncom/baby/refs/heads/main/announcement/data.json";
+  const ASSET_RAW_BASE =
+    "https://raw.githubusercontent.com/davysoncom/baby/refs/heads/main/announcement/";
   const PHOTOS_PREFIX = "announcement/photos/";
   const TOKEN_KEY = "babyAdminToken";
   const MAX_EDGE = 1800;
@@ -117,6 +119,52 @@
     useBtn.dataset.suggestion = converted.label;
   }
 
+  function assetPreviewUrl(src) {
+    if (!src) return "";
+    if (/^https?:\/\//i.test(src)) return src;
+    const rel = src.replace(/^announcement\//, "").replace(/^\.\//, "");
+    const bust = data.updatedAt ? "?v=" + encodeURIComponent(data.updatedAt) : "";
+    // Prefer raw (fast); Pages path as img onerror fallback via JS below
+    return ASSET_RAW_BASE + rel + bust;
+  }
+
+  function pagesPreviewUrl(src) {
+    const rel = String(src || "")
+      .replace(/^announcement\//, "")
+      .replace(/^\.\//, "");
+    return "../announcement/" + rel;
+  }
+
+  function renderPhotoThumb(src, orient, onRemove) {
+    const card = document.createElement("div");
+    card.className = "photo-card";
+
+    const img = document.createElement("img");
+    img.src = assetPreviewUrl(src);
+    img.alt = "";
+    img.loading = "lazy";
+    img.onerror = () => {
+      if (img.dataset.fallback === "1") return;
+      img.dataset.fallback = "1";
+      img.src = pagesPreviewUrl(src);
+    };
+
+    const meta = document.createElement("div");
+    meta.className = "photo-meta";
+    meta.textContent = orient || "photo";
+
+    const removeBtn = document.createElement("button");
+    removeBtn.type = "button";
+    removeBtn.className = "remove-photo";
+    removeBtn.textContent = "Remove";
+    removeBtn.addEventListener("click", onRemove);
+
+    card.appendChild(img);
+    card.appendChild(removeBtn);
+    card.appendChild(meta);
+    return card;
+  }
+
   function fillForm() {
     field("firstName").value = data.firstName || "";
     field("middleLast").value = data.middleLast || "";
@@ -129,27 +177,46 @@
     heroPreview.replaceChildren();
     if (data.hero && data.hero.src) {
       const img = document.createElement("img");
-      // Paths in data are like "photos/foo.jpg" relative to announcement/
-      const rel = data.hero.src.replace(/^announcement\//, "");
-      img.src = "../announcement/" + rel;
+      img.src = assetPreviewUrl(data.hero.src);
       img.alt = "Current hero";
+      img.onerror = () => {
+        if (img.dataset.fallback === "1") return;
+        img.dataset.fallback = "1";
+        img.src = pagesPreviewUrl(data.hero.src);
+      };
+      const removeBtn = document.createElement("button");
+      removeBtn.type = "button";
+      removeBtn.className = "remove-photo";
+      removeBtn.textContent = "Remove";
+      removeBtn.addEventListener("click", () => {
+        data.hero = { src: "", orient: "portrait" };
+        field("heroFile").value = "";
+        fillForm();
+        setStatus("Hero removed in the form. Save to publish.", "ok");
+      });
       heroPreview.appendChild(img);
+      heroPreview.appendChild(removeBtn);
     }
 
     photoList.replaceChildren();
     const photos = data.photos || [];
     if (!photos.length) {
-      const li = document.createElement("li");
-      li.textContent = "None yet";
-      photoList.appendChild(li);
+      const empty = document.createElement("p");
+      empty.className = "photo-empty";
+      empty.textContent = "No gallery photos yet.";
+      photoList.appendChild(empty);
       return;
     }
-    photos.forEach((photo) => {
+    photos.forEach((photo, index) => {
       const src = typeof photo === "string" ? photo : photo.src;
-      const orient = typeof photo === "string" ? "?" : photo.orient || "?";
-      const li = document.createElement("li");
-      li.textContent = src + " (" + orient + ")";
-      photoList.appendChild(li);
+      const orient = typeof photo === "string" ? "" : photo.orient || "";
+      photoList.appendChild(
+        renderPhotoThumb(src, orient, () => {
+          data.photos.splice(index, 1);
+          fillForm();
+          setStatus("Photo removed in the form. Save to publish.", "ok");
+        })
+      );
     });
   }
 

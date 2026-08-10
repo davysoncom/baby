@@ -58,7 +58,7 @@
   function showBlank() {
     if (comingSoon) comingSoon.hidden = true;
     if (announcement) announcement.hidden = true;
-    document.title = "";
+    document.title = "A New Arrival";
   }
 
   function buildDetails(data) {
@@ -251,7 +251,7 @@
     middleLastEl.textContent = String(data.middleLast || "").trim();
     middleLastEl.hidden = !middleLastEl.textContent;
     buildDetails(data);
-    document.title = data.firstName.trim() + " — A New Arrival";
+    document.title = "A New Arrival";
 
     const hero = normalizePhoto(data.hero);
     const orientClasses = ["is-portrait", "is-landscape", "is-square"];
@@ -359,8 +359,34 @@
     return null;
   }
 
+  // Admin live preview: /announcement/?preview=1 (iframe + postMessage)
+  function previewMode() {
+    const params = new URLSearchParams(window.location.search);
+    return params.has("preview");
+  }
+
+  function acceptPreviewMessage(event) {
+    if (window.parent && event.source !== window.parent) return;
+    if (
+      event.origin &&
+      event.origin !== "null" &&
+      event.origin !== window.location.origin
+    ) {
+      return;
+    }
+    const msg = event.data;
+    if (!msg || msg.type !== "baby-preview" || !msg.data) return;
+    render(msg.data, { demo: true });
+  }
+
   const demo = demoMode();
-  if (demo) {
+  if (previewMode()) {
+    document.documentElement.classList.add("is-preview");
+    window.addEventListener("message", acceptPreviewMessage);
+    if (window.parent && window.parent !== window) {
+      window.parent.postMessage({ type: "baby-preview-ready" }, "*");
+    }
+  } else if (demo) {
     render(demoData(demo === "landscape"), { demo: true });
   } else {
     fetch("data.json?t=" + Date.now(), { cache: "no-store" })

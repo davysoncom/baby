@@ -21,6 +21,11 @@
   const liveStatus = document.getElementById("live-status");
   const heroPreview = document.getElementById("hero-preview");
   const photoList = document.getElementById("photo-list");
+  const previewFrame = document.getElementById("page-preview");
+  const previewSync = document.getElementById("preview-sync");
+  const modeEditBtn = document.getElementById("mode-edit");
+  const modePreviewBtn = document.getElementById("mode-preview");
+  const openPreviewMobileBtn = document.getElementById("open-preview-mobile");
 
   /** @type {any} */
   let data = {
@@ -34,6 +39,14 @@
     hero: { src: "", orient: "portrait" },
     photos: [],
   };
+
+  /** Pending local files shown in preview before Save. */
+  let pendingHeroUrl = "";
+  let pendingHeroOrient = "";
+  /** @type {{ src: string, orient: string }[]} */
+  let pendingGallery = [];
+  let previewReady = false;
+  let previewTimer = 0;
 
   function getToken() {
     return (
@@ -117,12 +130,132 @@
 
   function assetPreviewUrl(src) {
     if (!src) return "";
-    if (/^https?:\/\//i.test(src)) return src;
+    if (/^(https?:|blob:|data:)/i.test(src)) return src;
     const rel = String(src)
       .replace(/^announcement\//, "")
       .replace(/^\.\//, "");
     const bust = data.updatedAt ? "?v=" + encodeURIComponent(data.updatedAt) : "";
     return "../announcement/" + rel + bust;
+  }
+
+  function absoluteAssetUrl(src) {
+    const rel = assetPreviewUrl(src);
+    if (!rel) return "";
+    try {
+      return new URL(rel, window.location.href).href;
+    } catch (_) {
+      return rel;
+    }
+  }
+
+  function revokeUrl(url) {
+    if (url && String(url).startsWith("blob:")) {
+      try {
+        URL.revokeObjectURL(url);
+      } catch (_) {
+        /* ignore */
+      }
+    }
+  }
+
+  function clearPendingHero() {
+    revokeUrl(pendingHeroUrl);
+    pendingHeroUrl = "";
+    pendingHeroOrient = "";
+  }
+
+  function clearPendingGallery() {
+    pendingGallery.forEach((p) => revokeUrl(p.src));
+    pendingGallery = [];
+  }
+
+  function readImageOrient(file) {
+    return new Promise((resolve) => {
+      const url = URL.createObjectURL(file);
+      const img = new Image();
+      img.onload = () => {
+        const orient = orientOf(img.naturalWidth, img.naturalHeight);
+        URL.revokeObjectURL(url);
+        resolve(orient);
+      };
+      img.onerror = () => {
+        URL.revokeObjectURL(url);
+        resolve("portrait");
+      };
+      img.src = url;
+    });
+  }
+
+  function buildPreviewData() {
+    const firstName = field("firstName").value.trim();
+    const middleLast = field("middleLast").value.trim();
+    const date = field("date").value.trim();
+    const time = field("time").value.trim();
+    const weightKg = field("weightKg").value.trim();
+    const weightLbOz = field("weightLbOz").value.trim();
+
+    let heroSrc = "";
+    let heroOrient = "portrait";
+    if (pendingHeroUrl) {
+      heroSrc = pendingHeroUrl;
+      heroOrient = pendingHeroOrient || "portrait";
+    } else if (data.hero && data.hero.src) {
+      heroSrc = absoluteAssetUrl(data.hero.src);
+      heroOrient = data.hero.orient || "portrait";
+    }
+
+    const photos = (data.photos || [])
+      .map((photo) => {
+        const src = typeof photo === "string" ? photo : photo && photo.src;
+        if (!src) return null;
+        return {
+          src: absoluteAssetUrl(src),
+          orient:
+            typeof photo === "string" ? "" : (photo && photo.orient) || "",
+        };
+      })
+      .filter(Boolean)
+      .concat(pendingGallery);
+
+    return {
+      live: true,
+      firstName: firstName,
+      middleLast: middleLast,
+      date: date,
+      time: time,
+      weightKg: weightKg,
+      weightLbOz: weightLbOz,
+      hero: { src: heroSrc, orient: heroOrient },
+      photos: photos,
+      updatedAt: Date.now(),
+    };
+  }
+
+  function pushPreview() {
+    if (!previewFrame || !previewFrame.contentWindow) return;
+    if (!previewReady) return;
+    previewFrame.contentWindow.postMessage(
+      { type: "baby-preview", data: buildPreviewData() },
+      window.location.origin
+    );
+    if (previewSync) previewSync.textContent = "Synced";
+  }
+
+  function schedulePreview() {
+    if (previewSync) previewSync.textContent = "Updating…";
+    window.clearTimeout(previewTimer);
+    previewTimer = window.setTimeout(pushPreview, 120);
+  }
+
+  function setAdminMode(mode) {
+    const isPreview = mode === "preview";
+    document.body.classList.toggle("is-preview", isPreview);
+    document.body.classList.toggle("is-edit", !isPreview);
+    if (modeEditBtn) modeEditBtn.setAttribute("aria-pressed", String(!isPreview));
+    if (modePreviewBtn) {
+      modePreviewBtn.setAttribute("aria-pressed", String(isPreview));
+    }
+    if (isPreview) schedulePreview();
   }
 
   function renderPhotoThumb(src, orient, onRemove) {
@@ -160,15 +293,17 @@
     refreshWeightAdvice();
 
     heroPreview.replaceChildren();
-    if (data.hero && data.hero.src) {
+    const heroSrc = pendingHeroUrl || (data.hero && data.hero.src) || "";
+    if (heroSrc) {
       const img = document.createElement("img");
-      img.src = assetPreviewUrl(data.hero.src);
+      img.src = pendingHeroUrl || assetPreviewUrl(data.hero.src);
       img.alt = "Current hero";
       const removeBtn = document.createElement("button");
       removeBtn.type = "button";
       removeBtn.className = "remove-photo";
       removeBtn.textContent = "Remove";
       removeBtn.addEventListener("click", () => {
+        clearPendingHero();
         data.hero = { src: "", orient: "portrait" };
         field("heroFile").value = "";
         fillForm();
@@ -180,11 +315,14 @@
 
     photoList.replaceChildren();
     const photos = data.photos || [];
-    if (!photos.length) {
+    const savedCount = photos.length;
+    const pendingCount = pendingGallery.length;
+    if (!savedCount && !pendingCount) {
       const empty = document.createElement("p");
       empty.className = "photo-empty";
       empty.textContent = "No gallery photos yet.";
       photoList.appendChild(empty);
+      schedulePreview();
       return;
     }
     photos.forEach((photo, index) => {
@@ -198,6 +336,18 @@
         })
       );
     });
+    pendingGallery.forEach((photo, index) => {
+      photoList.appendChild(
+        renderPhotoThumb(photo.src, photo.orient || "new", () => {
+          revokeUrl(photo.src);
+          pendingGallery.splice(index, 1);
+          field("photoFiles").value = "";
+          fillForm();
+          setStatus("Pending photo removed from preview.", "ok");
+        })
+      );
+    });
+    schedulePreview();
   }
 
   function apiHeaders(token) {
@@ -396,18 +546,91 @@
 
   clearPhotosBtn.addEventListener("click", () => {
     data.photos = [];
+    clearPendingGallery();
+    field("photoFiles").value = "";
     fillForm();
     setStatus("Gallery cleared in the form. Save to publish.", "ok");
   });
 
-  field("weightKg").addEventListener("input", refreshWeightAdvice);
+  field("weightKg").addEventListener("input", () => {
+    refreshWeightAdvice();
+    schedulePreview();
+  });
   document.getElementById("weight-advice-use").addEventListener("click", () => {
     const suggestion =
       document.getElementById("weight-advice-use").dataset.suggestion || "";
     if (!suggestion) return;
     field("weightLbOz").value = suggestion;
     refreshWeightAdvice();
+    schedulePreview();
   });
+
+  ["firstName", "middleLast", "date", "time", "weightLbOz"].forEach((id) => {
+    field(id).addEventListener("input", schedulePreview);
+  });
+
+  field("heroFile").addEventListener("change", async () => {
+    const file = field("heroFile").files && field("heroFile").files[0];
+    clearPendingHero();
+    if (!file) {
+      fillForm();
+      return;
+    }
+    pendingHeroUrl = URL.createObjectURL(file);
+    pendingHeroOrient = await readImageOrient(file);
+    fillForm();
+    setStatus("Hero ready in preview — Save to publish.", "ok");
+  });
+
+  field("photoFiles").addEventListener("change", async () => {
+    const files = Array.from(field("photoFiles").files || []);
+    if (!files.length) return;
+    clearPendingGallery();
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      const src = URL.createObjectURL(file);
+      const orient = await readImageOrient(file);
+      pendingGallery.push({ src: src, orient: orient });
+    }
+    fillForm();
+    setStatus(
+      files.length +
+        " gallery photo" +
+        (files.length === 1 ? "" : "s") +
+        " ready in preview — Save to publish.",
+      "ok"
+    );
+  });
+
+  if (modeEditBtn) {
+    modeEditBtn.addEventListener("click", () => setAdminMode("edit"));
+  }
+  if (modePreviewBtn) {
+    modePreviewBtn.addEventListener("click", () => setAdminMode("preview"));
+  }
+  if (openPreviewMobileBtn) {
+    openPreviewMobileBtn.addEventListener("click", () => setAdminMode("preview"));
+  }
+
+  window.addEventListener("message", (event) => {
+    if (event.origin !== window.location.origin) return;
+    if (!event.data || event.data.type !== "baby-preview-ready") return;
+    previewReady = true;
+    pushPreview();
+  });
+
+  if (previewFrame) {
+    previewFrame.addEventListener("load", () => {
+      // If the iframe reloads, wait for its ready ping (or nudge after a beat).
+      previewReady = false;
+      window.setTimeout(() => {
+        if (!previewReady) {
+          previewReady = true;
+          pushPreview();
+        }
+      }, 400);
+    });
+  }
 
   function applyLiveStatus(isLive) {
     if (!liveStatus) return;
@@ -581,6 +804,8 @@
       setStatus("Updating data.json…");
       await saveDataJson(token, "Update announcement details");
 
+      clearPendingHero();
+      clearPendingGallery();
       field("heroFile").value = "";
       field("photoFiles").value = "";
       fillForm();

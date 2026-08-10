@@ -7,6 +7,8 @@
       content="width=device-width, initial-scale=1, viewport-fit=cover"
     />
     <title>Announcement admin</title>
+    <link rel="icon" href="/favicon.png" type="image/png" />
+    <link rel="apple-touch-icon" href="/favicon.png" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -21,6 +23,7 @@
         --accent: #d48496;
         --field: #fff;
         --line: color-mix(in srgb, var(--ink) 14%, transparent);
+        --sidebar: min(22.5rem, 100%);
         --pad: max(1rem, env(safe-area-inset-left));
         --pad-r: max(1rem, env(safe-area-inset-right));
       }
@@ -29,26 +32,149 @@
         box-sizing: border-box;
       }
 
+      html,
       body {
         margin: 0;
+        height: 100%;
+      }
+
+      body {
         font-family: "Figtree", system-ui, sans-serif;
         color: var(--ink);
+        background: #e8d5dc;
+      }
+
+      .admin-shell {
+        display: grid;
+        height: 100dvh;
+        grid-template-rows: auto 1fr;
+      }
+
+      .mode-bar {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 0.35rem;
+        padding: calc(0.55rem + env(safe-area-inset-top)) var(--pad-r) 0.55rem
+          var(--pad);
+        background: color-mix(in srgb, #fff 70%, var(--blush));
+        border-bottom: 1px solid var(--line);
+        z-index: 5;
+      }
+
+      .mode-bar button {
+        font: inherit;
+        font-weight: 600;
+        font-size: 0.95rem;
+        min-height: 2.75rem;
+        border: 1px solid transparent;
+        border-radius: 10px;
+        background: transparent;
+        color: var(--ink);
+        cursor: pointer;
+      }
+
+      .mode-bar button[aria-pressed="true"] {
+        background: var(--ink);
+        color: #f7faf7;
+      }
+
+      .workspace {
+        display: grid;
+        min-height: 0;
+        height: 100%;
+      }
+
+      .form-pane {
+        min-height: 0;
+        overflow: auto;
+        padding: 1.1rem var(--pad-r) calc(1.5rem + env(safe-area-inset-bottom))
+          var(--pad);
         background: linear-gradient(165deg, var(--sage), var(--blush));
-        min-height: 100dvh;
-        padding: calc(1.25rem + env(safe-area-inset-top)) var(--pad-r)
-          calc(2rem + env(safe-area-inset-bottom)) var(--pad);
+        -webkit-overflow-scrolling: touch;
+      }
+
+      .preview-pane {
+        min-height: 0;
+        display: none;
+        flex-direction: column;
+        background: #2f2428;
+      }
+
+      .preview-toolbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.75rem;
+        padding: 0.55rem 0.85rem;
+        color: #f7eef1;
+        font-size: 0.82rem;
+        font-weight: 500;
+      }
+
+      .preview-toolbar span {
+        opacity: 0.85;
+      }
+
+      .preview-frame-wrap {
+        flex: 1;
+        min-height: 0;
+        position: relative;
+      }
+
+      .preview-frame {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        border: 0;
+        background: #fff;
+      }
+
+      body.is-preview .form-pane {
+        display: none;
+      }
+
+      body.is-preview .preview-pane {
+        display: flex;
+      }
+
+      @media (min-width: 960px) {
+        .mode-bar {
+          display: none;
+        }
+
+        .admin-shell {
+          grid-template-rows: 1fr;
+        }
+
+        .workspace {
+          grid-template-columns: var(--sidebar) 1fr;
+        }
+
+        .form-pane {
+          display: block !important;
+          border-right: 1px solid var(--line);
+        }
+
+        .preview-pane {
+          display: flex !important;
+        }
+
+        body.is-preview .form-pane {
+          display: block !important;
+        }
       }
 
       h1 {
         margin: 0 0 0.25rem;
-        font-size: 1.6rem;
+        font-size: 1.45rem;
         font-weight: 600;
       }
 
       .lede {
-        margin: 0 0 1.5rem;
+        margin: 0 0 1.25rem;
         color: color-mix(in srgb, var(--ink) 70%, transparent);
-        font-size: 0.95rem;
+        font-size: 0.92rem;
         line-height: 1.4;
       }
 
@@ -56,7 +182,6 @@
         display: grid;
         gap: 1rem;
         max-width: 34rem;
-        margin: 0 auto;
       }
 
       label {
@@ -217,7 +342,8 @@
         color: color-mix(in srgb, var(--ink) 70%, transparent);
       }
 
-      .photo-card .remove-photo {
+      .photo-card .remove-photo,
+      .hero-preview-wrap .remove-photo {
         position: absolute;
         top: 0.4rem;
         right: 0.4rem;
@@ -244,22 +370,6 @@
         position: relative;
       }
 
-      .hero-preview-wrap .remove-photo {
-        position: absolute;
-        top: 0.5rem;
-        right: 0.5rem;
-        min-height: 2rem;
-        padding: 0.35rem 0.55rem;
-        border: 0;
-        border-radius: 999px;
-        background: color-mix(in srgb, var(--ink) 82%, transparent);
-        color: #fff;
-        font: inherit;
-        font-size: 0.75rem;
-        font-weight: 600;
-        cursor: pointer;
-      }
-
       .weight-advice {
         display: grid;
         gap: 0.55rem;
@@ -270,134 +380,182 @@
         color: var(--ink);
         font-weight: 600;
       }
+
+      .mobile-preview-cta {
+        display: grid;
+        margin-top: 0.25rem;
+      }
+
+      @media (min-width: 960px) {
+        .mobile-preview-cta {
+          display: none;
+        }
+      }
     </style>
   </head>
-  <body>
-    <form id="admin-form">
-      <div>
-        <h1>Announcement admin</h1>
-        <p class="lede">
-          Update name, details, and photos from your phone. Saves to GitHub Pages.
-        </p>
-      </div>
-
-      <div class="token-box">
-        <div id="token-status" class="token-status">No token saved yet.</div>
-        <label id="token-label">
-          GitHub token
-          <input
-            id="token"
-            type="password"
-            autocomplete="off"
-            spellcheck="false"
-            placeholder="Fine-grained PAT with Contents write"
-          />
-        </label>
-        <p class="hint">
-          Setup once: GitHub → Settings → Developer settings → Fine-grained
-          personal access tokens → Generate. Resource owner
-          <strong>davysoncom</strong>, only repository
-          <strong>baby</strong>, permission <strong>Contents: Read and
-          write</strong>. Paste here once; it stays in this phone’s
-          localStorage until you Clear token. Revoke the token after the
-          announcement is done.
-        </p>
-        <button type="button" class="secondary" id="clear-token">
-          Clear token
+  <body class="is-edit">
+    <div class="admin-shell">
+      <div class="mode-bar" role="tablist" aria-label="Admin view">
+        <button type="button" id="mode-edit" aria-pressed="true">Edit</button>
+        <button type="button" id="mode-preview" aria-pressed="false">
+          Preview
         </button>
       </div>
 
-      <label>
-        First name
-        <input id="firstName" name="firstName" type="text" autocomplete="off" />
-      </label>
+      <div class="workspace">
+        <aside class="form-pane">
+          <form id="admin-form">
+            <div>
+              <h1>Announcement admin</h1>
+              <p class="lede">
+                Edit on the left; the preview uses your current form values,
+                including photos you haven’t saved yet.
+              </p>
+            </div>
 
-      <label>
-        Middle + last name
-        <input id="middleLast" name="middleLast" type="text" autocomplete="off" />
-      </label>
+            <button
+              type="button"
+              class="secondary mobile-preview-cta"
+              id="open-preview-mobile"
+            >
+              Open live preview
+            </button>
 
-      <div class="row two">
-        <label>
-          Date
-          <input id="date" name="date" type="text" placeholder="31.07.2026" />
-        </label>
-        <label>
-          Time
-          <input id="time" name="time" type="text" placeholder="11:37 am" />
-        </label>
+            <div class="token-box">
+              <div id="token-status" class="token-status">No token saved yet.</div>
+              <label id="token-label">
+                GitHub token
+                <input
+                  id="token"
+                  type="password"
+                  autocomplete="off"
+                  spellcheck="false"
+                  placeholder="Fine-grained PAT with Contents write"
+                />
+              </label>
+              <p class="hint">
+                Setup once: GitHub → Settings → Developer settings → Fine-grained
+                personal access tokens → Generate. Resource owner
+                <strong>davysoncom</strong>, only repository
+                <strong>baby</strong>, permission <strong>Contents: Read and
+                write</strong>. Paste here once; it stays in this phone’s
+                localStorage until you Clear token. Revoke the token after the
+                announcement is done.
+              </p>
+              <button type="button" class="secondary" id="clear-token">
+                Clear token
+              </button>
+            </div>
+
+            <label>
+              First name
+              <input id="firstName" name="firstName" type="text" autocomplete="off" />
+            </label>
+
+            <label>
+              Middle + last name
+              <input id="middleLast" name="middleLast" type="text" autocomplete="off" />
+            </label>
+
+            <div class="row two">
+              <label>
+                Date
+                <input id="date" name="date" type="text" placeholder="31.07.2026" />
+              </label>
+              <label>
+                Time
+                <input id="time" name="time" type="text" placeholder="11:37 am" />
+              </label>
+            </div>
+
+            <div class="row two">
+              <label>
+                Weight (kg)
+                <input id="weightKg" name="weightKg" type="text" placeholder="3.225kg" />
+              </label>
+              <label>
+                Weight (lbs/oz)
+                <input
+                  id="weightLbOz"
+                  name="weightLbOz"
+                  type="text"
+                  placeholder="7lbs 2oz"
+                />
+              </label>
+            </div>
+            <div class="weight-advice" id="weight-advice">
+              <p class="hint" id="weight-advice-text" style="margin: 0">
+                Enter kg for a lbs/oz suggestion.
+              </p>
+              <button type="button" class="secondary" id="weight-advice-use" hidden>
+                Use suggestion
+              </button>
+            </div>
+
+            <label>
+              Hero photo
+              <input id="heroFile" type="file" accept="image/*" />
+              <span class="hint">Replaces the current hero if you pick a new file.</span>
+            </label>
+            <div id="hero-preview" class="preview hero-preview-wrap"></div>
+
+            <label>
+              Gallery photos
+              <input id="photoFiles" type="file" accept="image/*" multiple />
+              <span class="hint"
+                >Adds to the gallery. Remove individual thumbnails below, then
+                Save.</span
+              >
+            </label>
+            <div>
+              <p class="hint" style="margin: 0 0 0.35rem">Current gallery</p>
+              <div id="photo-list" class="photo-grid"></div>
+              <button type="button" class="secondary" id="clear-photos" style="margin-top: 0.65rem">
+                Clear all gallery photos
+              </button>
+            </div>
+
+            <div class="actions">
+              <button type="submit" class="primary" id="save">Save to site</button>
+              <p class="hint">
+                After save, GitHub Pages usually updates
+                <strong>/announcement/</strong> in about a minute.
+              </p>
+              <p id="status" class="status" role="status"></p>
+            </div>
+
+            <div class="token-box">
+              <div id="live-status" class="token-status">Checking live flag…</div>
+              <p class="hint">
+                Go live sets <code>live: true</code> in data.json so
+                <strong>baby.davyson.com</strong> shows the announcement after Pages
+                updates (~1 minute). Preview anytime at /announcement/. Unpublish
+                sets <code>live: false</code>.
+              </p>
+              <button type="button" class="primary" id="go-live">Go live at root</button>
+              <button type="button" class="secondary" id="unpublish">
+                Unpublish root
+              </button>
+            </div>
+          </form>
+        </aside>
+
+        <section class="preview-pane" aria-label="Live page preview">
+          <div class="preview-toolbar">
+            <span>Live preview (unsaved changes included)</span>
+            <span id="preview-sync">Waiting…</span>
+          </div>
+          <div class="preview-frame-wrap">
+            <iframe
+              class="preview-frame"
+              id="page-preview"
+              title="Announcement page preview"
+              src="../announcement/?preview=1"
+            ></iframe>
+          </div>
+        </section>
       </div>
-
-      <div class="row two">
-        <label>
-          Weight (kg)
-          <input id="weightKg" name="weightKg" type="text" placeholder="3.225kg" />
-        </label>
-        <label>
-          Weight (lbs/oz)
-          <input
-            id="weightLbOz"
-            name="weightLbOz"
-            type="text"
-            placeholder="7lbs 2oz"
-          />
-        </label>
-      </div>
-      <div class="weight-advice" id="weight-advice">
-        <p class="hint" id="weight-advice-text" style="margin: 0">
-          Enter kg for a lbs/oz suggestion.
-        </p>
-        <button type="button" class="secondary" id="weight-advice-use" hidden>
-          Use suggestion
-        </button>
-      </div>
-
-      <label>
-        Hero photo
-        <input id="heroFile" type="file" accept="image/*" />
-        <span class="hint">Replaces the current hero if you pick a new file.</span>
-      </label>
-      <div id="hero-preview" class="preview hero-preview-wrap"></div>
-
-      <label>
-        Gallery photos
-        <input id="photoFiles" type="file" accept="image/*" multiple />
-        <span class="hint"
-          >Adds to the gallery. Remove individual thumbnails below, then
-          Save.</span
-        >
-      </label>
-      <div>
-        <p class="hint" style="margin: 0 0 0.35rem">Current gallery</p>
-        <div id="photo-list" class="photo-grid"></div>
-        <button type="button" class="secondary" id="clear-photos" style="margin-top: 0.65rem">
-          Clear all gallery photos
-        </button>
-      </div>
-
-      <div class="actions">
-        <button type="submit" class="primary" id="save">Save to site</button>
-        <p class="hint">
-          After save, GitHub Pages usually updates
-          <strong>/announcement/</strong> in about a minute.
-        </p>
-        <p id="status" class="status" role="status"></p>
-      </div>
-
-      <div class="token-box">
-        <div id="live-status" class="token-status">Checking live flag…</div>
-        <p class="hint">
-          Go live sets <code>live: true</code> in data.json so
-          <strong>baby.davyson.com</strong> shows the announcement after Pages
-          updates (~1 minute). Preview anytime at /announcement/. Unpublish
-          sets <code>live: false</code>.
-        </p>
-        <button type="button" class="primary" id="go-live">Go live at root</button>
-        <button type="button" class="secondary" id="unpublish">
-          Unpublish root
-        </button>
-      </div>
-    </form>
+    </div>
 
     <script src="admin.js"></script>
   </body>

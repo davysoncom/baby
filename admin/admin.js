@@ -181,7 +181,8 @@
     return res.json();
   }
 
-  async function githubPut(path, contentBase64, message, token, sha) {
+  async function githubPut(path, contentBase64, message, token, sha, attempt) {
+    const tryNumber = attempt || 0;
     const url =
       "https://api.github.com/repos/" +
       OWNER +
@@ -200,6 +201,19 @@
       headers: apiHeaders(token),
       body: JSON.stringify(payload),
     });
+    // 409 = file changed since we read its sha (common if two saves overlap
+    // or photos take a while). Re-read and retry with the latest sha.
+    if (res.status === 409 && tryNumber < 3) {
+      const fresh = await githubGet(path, token);
+      return githubPut(
+        path,
+        contentBase64,
+        message,
+        token,
+        fresh && fresh.sha,
+        tryNumber + 1
+      );
+    }
     if (!res.ok) {
       const body = await res.text();
       throw new Error("GitHub PUT " + path + " failed: " + res.status + " " + body);

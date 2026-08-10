@@ -79,14 +79,27 @@ a {
   letter-spacing: -0.02em;
 }
 
-/* Hero — never crop the primary photo.
-   Mobile: stack image + details in the first viewport.
-   Desktop portrait/square: details beside image.
-   Desktop landscape: stack, image as large as fits. */
+/* Hero — sticky scroll scrub:
+   start full-bleed cover → zoom into fitted layout; details near end. */
 .hero-stage {
-  --hero-chrome: clamp(10.5rem, 16vh, 12.5rem); /* name band + hint + pad */
+  --hero-chrome: clamp(10.5rem, 16vh, 12.5rem);
+  --hero-progress: 0;
+  --hero-reveal: clamp(
+    0,
+    calc((var(--hero-progress) - 0.78) / 0.22),
+    1
+  );
+  --hero-hint: clamp(0, calc((0.55 - var(--hero-progress)) / 0.55), 1);
   position: relative;
-  min-height: 100dvh;
+  height: 190dvh;
+  box-sizing: border-box;
+}
+
+.hero-pin {
+  position: sticky;
+  top: 0;
+  height: 100dvh;
+  width: 100%;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -94,6 +107,7 @@ a {
   padding: calc(0.6rem + var(--safe-top)) clamp(0.75rem, 2.5vw, 1.5rem)
     calc(3rem + var(--safe-bottom));
   box-sizing: border-box;
+  overflow: hidden;
 }
 
 .hero {
@@ -106,6 +120,8 @@ a {
   max-height: calc(100dvh - 3.5rem);
   container-type: inline-size;
   container-name: hero;
+  position: relative;
+  z-index: 1;
 }
 
 /* Landscape: stack; size from the image’s intrinsic box (not % of parent —
@@ -116,6 +132,7 @@ a {
   align-items: stretch;
 }
 
+.hero-stage.is-landscape .hero-media-slot,
 .hero-stage.is-landscape .hero-media {
   width: max-content;
   max-width: 100%;
@@ -145,6 +162,9 @@ a {
   transform: translateX(-50%);
   color: color-mix(in srgb, var(--ink) 70%, var(--accent));
   text-decoration: none;
+  z-index: 3;
+  opacity: calc(var(--hero-hint) * 0.9);
+  pointer-events: auto;
   animation: hint-pulse 2.2s ease-in-out infinite;
 }
 
@@ -156,6 +176,13 @@ a {
   transform: rotate(45deg);
 }
 
+.hero-media-slot {
+  position: relative;
+  width: 100%;
+  min-height: 0;
+  flex: 0 1 auto;
+}
+
 .hero-media {
   display: flex;
   align-items: center;
@@ -163,6 +190,31 @@ a {
   width: 100%;
   min-height: 0;
   background: transparent;
+  position: relative;
+  z-index: 2;
+  overflow: hidden;
+}
+
+/* Scrub uses fixed frame resize + object-fit cover (no CSS scale —
+   scaling a small bitmap up causes banding / weird lines). */
+.hero-media.is-scrubbing {
+  position: fixed;
+  margin: 0;
+  max-width: none;
+  z-index: 4;
+}
+
+.hero-media.is-scrubbing img {
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  max-height: none;
+  object-fit: cover;
+  object-position: center;
+}
+
+.hero-media.is-scrubbing.is-settling img {
+  object-fit: contain;
 }
 
 .hero-media img {
@@ -185,12 +237,21 @@ a {
   display: none;
 }
 
+.hero-media-slot:has(.hero-media.is-empty) {
+  display: none;
+}
+
 .hero-band {
   width: 100%;
   flex: 0 0 auto;
   padding: 1rem 1.15rem 1.15rem;
   text-align: center;
   background: color-mix(in srgb, var(--band) 82%, #fff);
+  position: relative;
+  z-index: 1;
+  opacity: var(--hero-reveal);
+  transform: translateY(calc((1 - var(--hero-reveal)) * 14px));
+  will-change: opacity, transform;
 }
 
 .first-name {
@@ -202,7 +263,6 @@ a {
   line-height: 0.95;
   letter-spacing: -0.03em;
   overflow-wrap: anywhere;
-  animation: fade-up 0.7s ease both;
 }
 
 .middle-last {
@@ -211,7 +271,6 @@ a {
   font-size: clamp(1rem, 5cqi, 1.25rem);
   font-weight: 500;
   letter-spacing: 0.04em;
-  animation: fade-up 0.7s ease 0.08s both;
 }
 
 .details {
@@ -223,7 +282,6 @@ a {
   font-size: clamp(0.88rem, 4cqi, 1.02rem);
   font-weight: 500;
   color: color-mix(in srgb, var(--ink) 82%, var(--accent));
-  animation: fade-up 0.7s ease 0.16s both;
 }
 
 .details .sep {
@@ -264,18 +322,41 @@ a {
 @keyframes hint-pulse {
   0%,
   100% {
-    opacity: 0.55;
     translate: 0 0;
   }
   50% {
-    opacity: 1;
     translate: 0 4px;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .hero-stage {
+    --hero-progress: 1;
+    height: auto;
+    min-height: 100dvh;
+  }
+
+  .hero-pin {
+    position: relative;
+    overflow: visible;
+  }
+
+  .hero-media {
+    position: relative !important;
+    inset: auto !important;
+    width: auto !important;
+    height: auto !important;
+  }
+
+  .hero-band {
+    opacity: 1;
+    transform: none;
+    will-change: auto;
+  }
+
   .scroll-hint {
     animation: none;
+    opacity: 0.7;
   }
 }
 
@@ -293,6 +374,8 @@ a {
     max-height: calc(100dvh - 4rem);
   }
 
+  .hero-stage.is-portrait .hero-media-slot,
+  .hero-stage.is-square .hero-media-slot,
   .hero-stage.is-portrait .hero-media,
   .hero-stage.is-square .hero-media {
     flex: 1 1 auto;
@@ -517,5 +600,21 @@ a {
 
   .hero-media img {
     opacity: 1;
+  }
+
+  .hero-stage {
+    --hero-progress: 1;
+  }
+
+  .hero-media {
+    position: relative !important;
+    inset: auto !important;
+    width: auto !important;
+    height: auto !important;
+  }
+
+  .hero-band {
+    opacity: 1 !important;
+    transform: none !important;
   }
 }

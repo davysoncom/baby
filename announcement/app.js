@@ -3,6 +3,8 @@
   const comingSoon = document.getElementById("coming-soon");
   const announcement = document.getElementById("announcement");
   const heroStage = document.querySelector(".hero-stage");
+  const heroPin = document.querySelector(".hero-pin");
+  const heroMediaSlot = document.getElementById("hero-media-slot");
   const heroMedia = document.getElementById("hero-media");
   const heroImage = document.getElementById("hero-image");
   const firstNameEl = document.getElementById("first-name");
@@ -229,6 +231,155 @@
     document.title = "A New Arrival";
   }
 
+  const reduceMotionQuery = window.matchMedia(
+    "(prefers-reduced-motion: reduce)"
+  );
+  /** @type {{ left: number, top: number, w: number, h: number } | null} */
+  let heroEndRect = null;
+  let heroScrubRaf = 0;
+
+  function clamp01(value) {
+    return Math.min(1, Math.max(0, value));
+  }
+
+  function lerp(a, b, t) {
+    return a + (b - a) * t;
+  }
+
+  function prefersReducedMotion() {
+    return reduceMotionQuery.matches;
+  }
+
+  function clearHeroScrubStyles() {
+    if (!heroMedia) return;
+    heroMedia.classList.remove("is-scrubbing", "is-settling");
+    heroMedia.style.position = "";
+    heroMedia.style.left = "";
+    heroMedia.style.top = "";
+    heroMedia.style.width = "";
+    heroMedia.style.height = "";
+    heroMedia.style.right = "";
+    heroMedia.style.bottom = "";
+    heroMedia.style.margin = "";
+    heroMedia.style.transform = "";
+    if (heroImage) {
+      heroImage.style.width = "";
+      heroImage.style.height = "";
+      heroImage.style.maxWidth = "";
+      heroImage.style.maxHeight = "";
+      heroImage.style.objectFit = "";
+    }
+    if (heroMediaSlot) {
+      heroMediaSlot.style.width = "";
+      heroMediaSlot.style.height = "";
+    }
+  }
+
+  function measureHeroEndRect() {
+    if (!heroStage || !heroPin || !heroMedia) return null;
+    if (heroMedia.classList.contains("is-empty")) return null;
+    if (!heroImage || !heroImage.naturalWidth) return null;
+
+    clearHeroScrubStyles();
+    const rect = heroMedia.getBoundingClientRect();
+    if (rect.width < 2 || rect.height < 2) return null;
+
+    if (heroMediaSlot) {
+      heroMediaSlot.style.width = rect.width + "px";
+      heroMediaSlot.style.height = rect.height + "px";
+    }
+
+    // Viewport coordinates (paired with position:fixed during scrub)
+    return {
+      left: rect.left,
+      top: rect.top,
+      w: rect.width,
+      h: rect.height,
+    };
+  }
+
+  function refreshHeroEndRect() {
+    heroEndRect = measureHeroEndRect();
+  }
+
+  function applyHeroScrub() {
+    if (!heroStage) return;
+
+    if (prefersReducedMotion()) {
+      heroStage.style.setProperty("--hero-progress", "1");
+      clearHeroScrubStyles();
+      return;
+    }
+
+    if (
+      !heroMedia ||
+      !heroPin ||
+      heroMedia.classList.contains("is-empty") ||
+      announcement.hidden
+    ) {
+      heroStage.style.setProperty("--hero-progress", "1");
+      clearHeroScrubStyles();
+      return;
+    }
+
+    const range = heroStage.offsetHeight - window.innerHeight;
+    const stageTop = heroStage.getBoundingClientRect().top;
+    const progress = range <= 0 ? 1 : clamp01(-stageTop / range);
+    heroStage.style.setProperty("--hero-progress", String(progress));
+
+    if (progress >= 0.995) {
+      clearHeroScrubStyles();
+      return;
+    }
+
+    if (!heroEndRect) refreshHeroEndRect();
+    if (!heroEndRect) {
+      clearHeroScrubStyles();
+      return;
+    }
+
+    const pinRect = heroPin.getBoundingClientRect();
+    const left = lerp(pinRect.left, heroEndRect.left, progress);
+    const top = lerp(pinRect.top, heroEndRect.top, progress);
+    const width = lerp(pinRect.width, heroEndRect.w, progress);
+    const height = lerp(pinRect.height, heroEndRect.h, progress);
+
+    // Keep slot reserved so the band doesn't jump while media is fixed
+    if (heroMediaSlot) {
+      heroMediaSlot.style.width = heroEndRect.w + "px";
+      heroMediaSlot.style.height = heroEndRect.h + "px";
+    }
+
+    heroMedia.classList.add("is-scrubbing");
+    heroMedia.classList.toggle("is-settling", progress >= 0.9);
+    heroMedia.style.left = left + "px";
+    heroMedia.style.top = top + "px";
+    heroMedia.style.width = width + "px";
+    heroMedia.style.height = height + "px";
+  }
+
+  function scheduleHeroScrub() {
+    if (heroScrubRaf) return;
+    heroScrubRaf = window.requestAnimationFrame(() => {
+      heroScrubRaf = 0;
+      applyHeroScrub();
+    });
+  }
+
+  function onHeroScrubResize() {
+    heroEndRect = null;
+    refreshHeroEndRect();
+    applyHeroScrub();
+  }
+
+  window.addEventListener("scroll", scheduleHeroScrub, { passive: true });
+  window.addEventListener("resize", onHeroScrubResize);
+  if (typeof reduceMotionQuery.addEventListener === "function") {
+    reduceMotionQuery.addEventListener("change", onHeroScrubResize);
+  } else if (typeof reduceMotionQuery.addListener === "function") {
+    reduceMotionQuery.addListener(onHeroScrubResize);
+  }
+
   async function render(data, options) {
     const isDemo = Boolean(options && options.demo);
     assetVersion = (data && (data.updatedAt || data.v)) || "";
@@ -265,7 +416,14 @@
       if (heroStage) heroStage.classList.add("is-" + orient);
       heroImage.classList.remove("is-loaded");
       heroImage.alt = data.firstName.trim();
-      const markLoaded = () => heroImage.classList.add("is-loaded");
+      const markLoaded = () => {
+        heroImage.classList.add("is-loaded");
+        window.requestAnimationFrame(() => {
+          heroEndRect = null;
+          refreshHeroEndRect();
+          applyHeroScrub();
+        });
+      };
       heroImage.onload = markLoaded;
       heroImage.src = resolved.src;
       if (heroImage.complete && heroImage.naturalWidth) markLoaded();
@@ -275,12 +433,20 @@
     } else {
       heroMedia.classList.add("is-empty");
       heroImage.removeAttribute("src");
+      clearHeroScrubStyles();
+      if (heroStage) heroStage.style.setProperty("--hero-progress", "1");
     }
 
     const photos = (data.photos || []).map(normalizePhoto).filter(Boolean);
 
     const resolvedPhotos = await Promise.all(photos.map(ensureOrient));
     paintGalleries(resolvedPhotos);
+
+    window.requestAnimationFrame(() => {
+      heroEndRect = null;
+      refreshHeroEndRect();
+      applyHeroScrub();
+    });
   }
 
   window.addEventListener("resize", () => {

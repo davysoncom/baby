@@ -33,19 +33,32 @@
 
     <main id="announcement" class="announcement" hidden>
       <section class="hero-stage" aria-label="Announcement">
-        <div class="hero">
-          <div class="hero-media" id="hero-media">
-            <img id="hero-image" alt="" decoding="async" fetchpriority="high" />
+        <div class="hero-pin">
+          <div class="hero">
+            <div class="hero-media-slot" id="hero-media-slot">
+              <div class="hero-media" id="hero-media">
+                <img
+                  id="hero-image"
+                  alt=""
+                  decoding="async"
+                  fetchpriority="high"
+                />
+              </div>
+            </div>
+            <div class="hero-band">
+              <h1 id="first-name" class="first-name"></h1>
+              <p id="middle-last" class="middle-last"></p>
+              <div id="details" class="details"></div>
+            </div>
           </div>
-          <div class="hero-band">
-            <h1 id="first-name" class="first-name"></h1>
-            <p id="middle-last" class="middle-last"></p>
-            <div id="details" class="details"></div>
-          </div>
+          <a
+            class="scroll-hint"
+            href="#gallery-a"
+            aria-label="Scroll for more photos"
+          >
+            <span class="scroll-hint-chevron" aria-hidden="true"></span>
+          </a>
         </div>
-        <a class="scroll-hint" href="#gallery-a" aria-label="Scroll for more photos">
-          <span class="scroll-hint-chevron" aria-hidden="true"></span>
-        </a>
       </section>
 
       <section

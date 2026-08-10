@@ -223,6 +223,70 @@
         border: 1px solid var(--line);
       }
 
+      .token-box.is-collapsed {
+        gap: 0;
+        padding: 0.35rem 0.5rem 0.35rem 0.85rem;
+      }
+
+      .token-summary {
+        display: none;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.75rem;
+        width: 100%;
+        margin: 0;
+        padding: 0.55rem 0.35rem 0.55rem 0;
+        min-height: 2.75rem;
+        border: 0;
+        border-radius: 10px;
+        background: transparent;
+        color: inherit;
+        font: inherit;
+        font-size: 0.92rem;
+        font-weight: 500;
+        text-align: left;
+        cursor: pointer;
+      }
+
+      .token-box.has-saved-token .token-summary {
+        display: flex;
+      }
+
+      .token-summary-status {
+        color: #2f6b4f;
+        font-weight: 500;
+      }
+
+      .token-summary-action {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.3rem;
+        flex-shrink: 0;
+        font-size: 0.88rem;
+        font-weight: 600;
+        color: color-mix(in srgb, var(--ink) 72%, transparent);
+      }
+
+      .token-summary-action .chevron {
+        display: inline-block;
+        font-size: 0.75rem;
+        line-height: 1;
+        transition: transform 0.15s ease;
+      }
+
+      .token-box.has-saved-token:not(.is-collapsed) .token-summary-action .chevron {
+        transform: rotate(180deg);
+      }
+
+      .token-details {
+        display: grid;
+        gap: 0.65rem;
+      }
+
+      .token-box.is-collapsed .token-details {
+        display: none;
+      }
+
       .token-status {
         font-size: 0.92rem;
         font-weight: 500;
@@ -421,30 +485,46 @@
               Open live preview
             </button>
 
-            <div class="token-box">
-              <div id="token-status" class="token-status">No token saved yet.</div>
-              <label id="token-label">
-                GitHub token
-                <input
-                  id="token"
-                  type="password"
-                  autocomplete="off"
-                  spellcheck="false"
-                  placeholder="Fine-grained PAT with Contents write"
-                />
-              </label>
-              <p class="hint">
-                Setup once: GitHub → Settings → Developer settings → Fine-grained
-                personal access tokens → Generate. Resource owner
-                <strong>davysoncom</strong>, only repository
-                <strong>baby</strong>, permission <strong>Contents: Read and
-                write</strong>. Paste here once; it stays in this phone’s
-                localStorage until you Clear token. Revoke the token after the
-                announcement is done.
-              </p>
-              <button type="button" class="secondary" id="clear-token">
-                Clear token
+            <div class="token-box" id="token-box">
+              <button
+                type="button"
+                class="token-summary"
+                id="token-summary"
+                aria-expanded="false"
+                aria-controls="token-details"
+                hidden
+              >
+                <span class="token-summary-status">Token saved</span>
+                <span class="token-summary-action">
+                  <span class="token-summary-action-label">Change</span>
+                  <span class="chevron" aria-hidden="true">▾</span>
+                </span>
               </button>
+              <div class="token-details" id="token-details">
+                <div id="token-status" class="token-status">No token saved yet.</div>
+                <label id="token-label">
+                  GitHub token
+                  <input
+                    id="token"
+                    type="password"
+                    autocomplete="off"
+                    spellcheck="false"
+                    placeholder="Fine-grained PAT with Contents write"
+                  />
+                </label>
+                <p class="hint">
+                  Setup once: GitHub → Settings → Developer settings → Fine-grained
+                  personal access tokens → Generate. Resource owner
+                  <strong>davysoncom</strong>, only repository
+                  <strong>baby</strong>, permission <strong>Contents: Read and
+                  write</strong>. Paste here once; it stays in this phone’s
+                  localStorage until you Clear token. Revoke the token after the
+                  announcement is done.
+                </p>
+                <button type="button" class="secondary" id="clear-token">
+                  Clear token
+                </button>
+              </div>
             </div>
 
             <label>

@@ -9,6 +9,11 @@
   const JPEG_QUALITY = 0.82;
 
   const form = document.getElementById("admin-form");
+  const tokenBox = document.getElementById("token-box");
+  const tokenSummary = document.getElementById("token-summary");
+  const tokenSummaryActionLabel = tokenSummary
+    ? tokenSummary.querySelector(".token-summary-action-label")
+    : null;
   const tokenInput = document.getElementById("token");
   const tokenLabel = document.getElementById("token-label");
   const tokenStatus = document.getElementById("token-status");
@@ -26,6 +31,9 @@
   const modeEditBtn = document.getElementById("mode-edit");
   const modePreviewBtn = document.getElementById("mode-preview");
   const openPreviewMobileBtn = document.getElementById("open-preview-mobile");
+
+  /** When a token is saved, details stay collapsed until the user expands. */
+  let tokenExpanded = false;
 
   /** @type {any} */
   let data = {
@@ -56,12 +64,31 @@
   }
 
   function refreshTokenUi() {
-    const saved = localStorage.getItem(TOKEN_KEY);
+    const saved = Boolean(localStorage.getItem(TOKEN_KEY));
+    if (!saved) tokenExpanded = false;
+
+    const collapsed = saved && !tokenExpanded;
+
+    if (tokenBox) {
+      tokenBox.classList.toggle("has-saved-token", saved);
+      tokenBox.classList.toggle("is-collapsed", collapsed);
+    }
+
+    if (tokenSummary) {
+      tokenSummary.hidden = !saved;
+      tokenSummary.setAttribute("aria-expanded", String(saved && tokenExpanded));
+    }
+
+    if (tokenSummaryActionLabel) {
+      tokenSummaryActionLabel.textContent = tokenExpanded ? "Hide" : "Change";
+    }
+
     if (saved) {
       tokenStatus.textContent = "Token saved on this phone.";
       tokenStatus.classList.add("ok");
-      tokenLabel.hidden = true;
-      tokenInput.value = "";
+      // Collapsed: no input. Expanded: allow paste to replace without clearing first.
+      tokenLabel.hidden = collapsed;
+      if (collapsed) tokenInput.value = "";
     } else {
       tokenStatus.textContent = "No token saved yet.";
       tokenStatus.classList.remove("ok");
@@ -537,9 +564,27 @@
     fillForm();
   }
 
+  if (tokenSummary) {
+    tokenSummary.addEventListener("click", () => {
+      if (!localStorage.getItem(TOKEN_KEY)) return;
+      tokenExpanded = !tokenExpanded;
+      refreshTokenUi();
+      if (tokenExpanded) {
+        window.setTimeout(() => {
+          try {
+            tokenInput.focus({ preventScroll: true });
+          } catch (_) {
+            tokenInput.focus();
+          }
+        }, 0);
+      }
+    });
+  }
+
   clearTokenBtn.addEventListener("click", () => {
     localStorage.removeItem(TOKEN_KEY);
     tokenInput.value = "";
+    tokenExpanded = false;
     refreshTokenUi();
     setStatus("Token cleared from this phone.", "ok");
   });
@@ -662,11 +707,14 @@
     const typedToken = String(tokenInput.value || "").trim();
     if (typedToken) {
       localStorage.setItem(TOKEN_KEY, typedToken);
+      tokenExpanded = false;
       refreshTokenUi();
     }
     const token = getToken();
     if (!token) {
       setStatus("Paste a GitHub token first.", "error");
+      tokenExpanded = true;
+      refreshTokenUi();
       return null;
     }
     return token;
@@ -742,12 +790,15 @@
     const typedToken = String(tokenInput.value || "").trim();
     if (typedToken) {
       localStorage.setItem(TOKEN_KEY, typedToken);
+      tokenExpanded = false;
       refreshTokenUi();
     }
 
     const token = getToken();
     if (!token) {
       setStatus("Paste a GitHub token first.", "error");
+      tokenExpanded = true;
+      refreshTokenUi();
       return;
     }
 

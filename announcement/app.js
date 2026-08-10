@@ -285,6 +285,48 @@
     }
   }
 
+  /** Resting hero box from natural image size + layout caps (avoids 0×0 landscape). */
+  function computeHeroEndSize() {
+    if (!heroImage || !heroPin || !heroStage) return null;
+    const nw = heroImage.naturalWidth;
+    const nh = heroImage.naturalHeight;
+    if (!nw || !nh) return null;
+
+    const pinRect = heroPin.getBoundingClientRect();
+    const availableW = Math.max(80, pinRect.width);
+    const isLandscape = heroStage.classList.contains("is-landscape");
+    const isWide = window.matchMedia("(min-width: 960px)").matches;
+    const isDesktopRail =
+      isWide &&
+      (heroStage.classList.contains("is-portrait") ||
+        heroStage.classList.contains("is-square"));
+
+    let maxW;
+    let maxH;
+    if (isDesktopRail) {
+      const rail = Math.min(352, Math.max(264, window.innerWidth * 0.28));
+      maxW = Math.min(availableW - rail - 40, 46 * 16);
+      maxH = window.innerHeight - 4.5 * 16;
+    } else if (isLandscape) {
+      maxW = Math.min(availableW, window.innerWidth - 24, 64 * 16);
+      maxH = window.innerHeight - 12.5 * 16;
+    } else {
+      maxW = Math.min(availableW, 26.5 * 16);
+      maxH = window.innerHeight - 12.5 * 16;
+    }
+
+    maxW = Math.max(80, maxW);
+    maxH = Math.max(80, maxH);
+    const aspect = nw / nh;
+    let w = maxW;
+    let h = w / aspect;
+    if (h > maxH) {
+      h = maxH;
+      w = h * aspect;
+    }
+    return { w: Math.round(w), h: Math.round(h) };
+  }
+
   /** Size the in-flow slot to the resting media box (no fixed scrub styles). */
   function ensureHeroSlotSize() {
     if (!heroMedia || !heroMediaSlot || !heroImage) return false;
@@ -303,10 +345,16 @@
       return Boolean(heroEndSize);
     }
 
-    const rect = heroMedia.getBoundingClientRect();
-    if (rect.width < 2 || rect.height < 2) return false;
+    let size = computeHeroEndSize();
+    if (!size) {
+      const rect = heroMedia.getBoundingClientRect();
+      if (rect.width >= 2 && rect.height >= 2) {
+        size = { w: rect.width, h: rect.height };
+      }
+    }
+    if (!size) return false;
 
-    heroEndSize = { w: rect.width, h: rect.height };
+    heroEndSize = size;
     heroMediaSlot.style.width = heroEndSize.w + "px";
     heroMediaSlot.style.height = heroEndSize.h + "px";
     heroSlotSized = true;
@@ -352,17 +400,36 @@
       return;
     }
 
+    const pinRect = heroPin.getBoundingClientRect();
+
     if (!ensureHeroSlotSize()) {
-      clearHeroScrubStyles();
+      // Still show a full-bleed cover so landscape never looks blank.
+      heroMedia.classList.add("is-scrubbing");
+      heroMedia.classList.remove("is-settling");
+      heroMedia.style.left = pinRect.left + "px";
+      heroMedia.style.top = pinRect.top + "px";
+      heroMedia.style.width = pinRect.width + "px";
+      heroMedia.style.height = pinRect.height + "px";
       return;
     }
 
-    const pinRect = heroPin.getBoundingClientRect();
     const endRect = heroMediaSlot.getBoundingClientRect();
-    const left = lerp(pinRect.left, endRect.left, progress);
-    const top = lerp(pinRect.top, endRect.top, progress);
-    const width = lerp(pinRect.width, endRect.width, progress);
-    const height = lerp(pinRect.height, endRect.height, progress);
+    const endW = endRect.width > 2 ? endRect.width : heroEndSize.w;
+    const endH = endRect.height > 2 ? endRect.height : heroEndSize.h;
+    // Center a zero-ish slot using computed size inside the pin.
+    const endLeft =
+      endRect.width > 2
+        ? endRect.left
+        : pinRect.left + (pinRect.width - endW) / 2;
+    const endTop =
+      endRect.height > 2
+        ? endRect.top
+        : pinRect.top + (pinRect.height - endH) / 2;
+
+    const left = lerp(pinRect.left, endLeft, progress);
+    const top = lerp(pinRect.top, endTop, progress);
+    const width = lerp(pinRect.width, endW, progress);
+    const height = lerp(pinRect.height, endH, progress);
 
     heroMedia.classList.add("is-scrubbing");
     heroMedia.classList.toggle("is-settling", progress >= 0.9);

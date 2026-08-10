@@ -125,29 +125,29 @@ a {
   z-index: 1;
 }
 
-/* Landscape: stack; size from the image’s intrinsic box (not % of parent —
-   fit-content + max-width:100% on the img collapses to 0 width). */
+/* Landscape: definite width (avoid max-content → 0 collapse with scrub slot). */
 .hero-stage.is-landscape .hero {
-  width: max-content;
+  width: min(100%, 64rem);
   max-width: min(100%, 64rem);
   align-items: stretch;
 }
 
 .hero-stage.is-landscape .hero-media-slot,
 .hero-stage.is-landscape .hero-media {
-  width: max-content;
+  width: 100%;
   max-width: 100%;
 }
 
 .hero-stage.is-landscape .hero-media img {
-  /* Viewport-based cap so width does not depend on the fit-content parent */
-  max-width: min(100vw - 1.5rem, 64rem);
-  width: auto;
+  width: 100%;
   height: auto;
+  max-width: 100%;
+  max-height: calc(100dvh - var(--hero-chrome));
+  object-fit: contain;
 }
 
 .hero-stage.is-landscape .hero-band {
-  width: auto;
+  width: 100%;
   align-self: stretch;
   box-sizing: border-box;
 }

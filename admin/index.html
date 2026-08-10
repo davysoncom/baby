@@ -293,6 +293,19 @@
         <button type="submit" class="primary" id="save">Save to site</button>
         <p id="status" class="status" role="status"></p>
       </div>
+
+      <div class="token-box">
+        <div id="live-status" class="token-status">Checking root…</div>
+        <p class="hint">
+          Saving updates the announcement content. Tap Go live to serve that
+          page at <strong>baby.davyson.com</strong> (same URL, no redirect).
+          Unpublish blanks the root again.
+        </p>
+        <button type="button" class="primary" id="go-live">Go live at root</button>
+        <button type="button" class="secondary" id="unpublish">
+          Unpublish root (blank again)
+        </button>
+      </div>
     </form>
 
     <script src="admin.js"></script>

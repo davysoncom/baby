@@ -3,10 +3,13 @@
   const REPO = "baby";
   const BRANCH = "main";
   const DATA_PATH = "announcement/data.json";
+  const ROOT_INDEX_PATH = "index.html";
   const PHOTOS_PREFIX = "announcement/photos/";
   const TOKEN_KEY = "babyAdminToken";
   const MAX_EDGE = 1800;
   const JPEG_QUALITY = 0.82;
+  const BLANK_ROOT_HTML = "";
+  const ANN_INDEX_PATH = "announcement/index.html";
 
   const form = document.getElementById("admin-form");
   const tokenInput = document.getElementById("token");
@@ -16,6 +19,9 @@
   const clearPhotosBtn = document.getElementById("clear-photos");
   const statusEl = document.getElementById("status");
   const saveBtn = document.getElementById("save");
+  const goLiveBtn = document.getElementById("go-live");
+  const unpublishBtn = document.getElementById("unpublish");
+  const liveStatus = document.getElementById("live-status");
   const heroPreview = document.getElementById("hero-preview");
   const photoList = document.getElementById("photo-list");
 
@@ -281,6 +287,133 @@
     setStatus("Gallery cleared in the form. Save to publish.", "ok");
   });
 
+  function isRootLive(html) {
+    const text = html || "";
+    if (!text.trim()) return false;
+    // Live root serves the announcement page (with base href), not a redirect
+    return (
+      /base\s+href=["']\/announcement\/["']/i.test(text) ||
+      (/hero-stage/i.test(text) && !/http-equiv=["']refresh/i.test(text))
+    );
+  }
+
+  async function refreshLiveStatus() {
+    if (!liveStatus) return;
+    try {
+      const res = await fetch("../index.html", { cache: "no-store" });
+      if (!res.ok) {
+        liveStatus.textContent = "Could not read root page.";
+        liveStatus.classList.remove("ok");
+        return;
+      }
+      const html = await res.text();
+      if (isRootLive(html)) {
+        liveStatus.textContent = "Root is live (announcement at baby.davyson.com).";
+        liveStatus.classList.add("ok");
+      } else {
+        liveStatus.textContent = "Root is blank (not live yet).";
+        liveStatus.classList.remove("ok");
+      }
+    } catch (_) {
+      liveStatus.textContent = "Could not read root page.";
+      liveStatus.classList.remove("ok");
+    }
+  }
+
+  function buildLiveRootHtml(announcementHtml) {
+    let html = String(announcementHtml || "");
+    html = html.replace(/\s*<base\b[^>]*>/gi, "");
+    html = html.replace(/\s*<link\s+rel=["']canonical["'][^>]*>/gi, "");
+    if (!/<head[\s>]/i.test(html)) {
+      throw new Error("announcement/index.html is missing a <head>");
+    }
+    return html.replace(
+      /<head([^>]*)>/i,
+      '<head$1>\n    <base href="/announcement/" />\n    <link rel="canonical" href="/" />'
+    );
+  }
+
+  async function ensureToken() {
+    const typedToken = String(tokenInput.value || "").trim();
+    if (typedToken) {
+      localStorage.setItem(TOKEN_KEY, typedToken);
+      refreshTokenUi();
+    }
+    const token = getToken();
+    if (!token) {
+      setStatus("Paste a GitHub token first.", "error");
+      return null;
+    }
+    return token;
+  }
+
+  async function writeRootIndex(html, message) {
+    const token = await ensureToken();
+    if (!token) return;
+    goLiveBtn.disabled = true;
+    unpublishBtn.disabled = true;
+    setStatus(message.startsWith("Unpublish") ? "Unpublishing…" : "Going live…");
+    try {
+      const existing = await githubGet(ROOT_INDEX_PATH, token);
+      await githubPut(
+        ROOT_INDEX_PATH,
+        textToBase64(html),
+        message,
+        token,
+        existing && existing.sha
+      );
+      await refreshLiveStatus();
+      setStatus(
+        message.startsWith("Unpublish")
+          ? "Root blank again — site updates in about a minute."
+          : "Live at baby.davyson.com — updates in about a minute.",
+        "ok"
+      );
+    } catch (err) {
+      console.error(err);
+      setStatus(err.message || String(err), "error");
+    } finally {
+      goLiveBtn.disabled = false;
+      unpublishBtn.disabled = false;
+    }
+  }
+
+  goLiveBtn.addEventListener("click", async () => {
+    const token = await ensureToken();
+    if (!token) return;
+    goLiveBtn.disabled = true;
+    unpublishBtn.disabled = true;
+    setStatus("Going live…");
+    try {
+      const page = await githubGet(ANN_INDEX_PATH, token);
+      if (!page) throw new Error("announcement/index.html not found on GitHub");
+      const html = buildLiveRootHtml(decodeGithubContent(page));
+      const existing = await githubGet(ROOT_INDEX_PATH, token);
+      await githubPut(
+        ROOT_INDEX_PATH,
+        textToBase64(html),
+        "Go live: serve announcement at site root",
+        token,
+        existing && existing.sha
+      );
+      await refreshLiveStatus();
+      setStatus(
+        "Live at baby.davyson.com — content is on the root URL. Updates in about a minute.",
+        "ok"
+      );
+    } catch (err) {
+      console.error(err);
+      setStatus(err.message || String(err), "error");
+    } finally {
+      goLiveBtn.disabled = false;
+      unpublishBtn.disabled = false;
+    }
+  });
+
+  unpublishBtn.addEventListener("click", () => {
+    writeRootIndex(BLANK_ROOT_HTML, "Unpublish: blank out root index.html");
+  });
+
   form.addEventListener("submit", async (event) => {
     event.preventDefault();
     setStatus("");
@@ -382,6 +515,7 @@
   });
 
   refreshTokenUi();
+  refreshLiveStatus();
   loadData().catch((err) => {
     console.error(err);
     setStatus("Could not load current data. You can still fill and save.", "error");

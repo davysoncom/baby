@@ -6,33 +6,21 @@
   "weightKg": "10 kg",
   "weightLbOz": "7lbs 4oz",
   "hero": {
-    "src": "photos/hero-20260810-224937-aey0.jpg",
-    "orient": "portrait"
+    "src": "photos/hero-20260810-225314-jiho.jpg",
+    "orient": "landscape"
   },
   "photos": [
     {
-      "src": "photos/photo-20260810-224939-wd0z.jpg",
-      "orient": "portrait"
-    },
-    {
-      "src": "photos/photo-20260810-224941-p2ul.jpg",
-      "orient": "portrait"
-    },
-    {
-      "src": "photos/photo-20260810-224943-wv08.jpg",
+      "src": "photos/photo-20260810-225315-sula.jpg",
       "orient": "landscape"
     },
     {
-      "src": "photos/photo-20260810-224945-7p5r.jpg",
+      "src": "photos/photo-20260810-225318-lp3n.jpg",
       "orient": "landscape"
     },
     {
-      "src": "photos/photo-20260810-224947-oy28.jpg",
-      "orient": "portrait"
-    },
-    {
-      "src": "photos/photo-20260810-224949-z7tb.jpg",
-      "orient": "portrait"
+      "src": "photos/photo-20260810-225320-q09w.jpg",
+      "orient": "landscape"
     }
   ]
 }

@@ -264,10 +264,14 @@
       heroMedia.classList.add("is-" + orient);
       if (heroStage) heroStage.classList.add("is-" + orient);
       heroImage.classList.remove("is-loaded");
-      heroImage.src = resolved.src;
       heroImage.alt = data.firstName.trim();
-      heroImage.onload = () => heroImage.classList.add("is-loaded");
-      if (heroImage.complete) heroImage.classList.add("is-loaded");
+      const markLoaded = () => heroImage.classList.add("is-loaded");
+      heroImage.onload = markLoaded;
+      heroImage.src = resolved.src;
+      if (heroImage.complete && heroImage.naturalWidth) markLoaded();
+      else if (heroImage.decode) {
+        heroImage.decode().then(markLoaded).catch(() => {});
+      }
     } else {
       heroMedia.classList.add("is-empty");
       heroImage.removeAttribute("src");

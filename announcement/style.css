@@ -108,16 +108,24 @@ a {
   container-name: hero;
 }
 
-/* Landscape: stack; info band matches the rendered image width */
+/* Landscape: stack; size from the image’s intrinsic box (not % of parent —
+   fit-content + max-width:100% on the img collapses to 0 width). */
 .hero-stage.is-landscape .hero {
-  width: fit-content;
+  width: max-content;
   max-width: min(100%, 64rem);
   align-items: stretch;
 }
 
 .hero-stage.is-landscape .hero-media {
-  width: fit-content;
+  width: max-content;
   max-width: 100%;
+}
+
+.hero-stage.is-landscape .hero-media img {
+  /* Viewport-based cap so width does not depend on the fit-content parent */
+  max-width: min(100vw - 1.5rem, 64rem);
+  width: auto;
+  height: auto;
 }
 
 .hero-stage.is-landscape .hero-band {

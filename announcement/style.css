@@ -91,7 +91,8 @@ a {
   );
   --hero-hint: clamp(0, calc((0.55 - var(--hero-progress)) / 0.55), 1);
   position: relative;
-  height: 190dvh;
+  /* Tall stage: zoom/reveal, then a short hold before the gallery. */
+  height: 220dvh;
   box-sizing: border-box;
 }
 
@@ -455,15 +456,16 @@ a {
   }
 }
 
-/* Mosaic gallery */
+/* Mosaic gallery — full-width zebra rows */
 .gallery.mosaic {
   width: 100%;
+  max-width: none;
   scroll-margin-top: 0.75rem;
-  padding: 1rem max(0.5rem, env(safe-area-inset-left))
-    0.35rem max(0.5rem, env(safe-area-inset-right));
+  margin: 0;
+  padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 0.45rem;
+  gap: 0;
 }
 
 .gallery:empty {
@@ -474,14 +476,17 @@ a {
   display: grid;
   gap: 0.45rem;
   width: 100%;
-  opacity: 0;
-  transform: translateY(12px);
-  transition: opacity 0.55s ease, transform 0.55s ease;
+  box-sizing: border-box;
+  padding: 0.55rem max(0.5rem, env(safe-area-inset-left))
+    0.55rem max(0.5rem, env(safe-area-inset-right));
 }
 
-.mosaic-row.is-visible {
-  opacity: 1;
-  transform: none;
+.mosaic-row.stripe-a {
+  background: color-mix(in srgb, var(--band) 82%, #fff);
+}
+
+.mosaic-row.stripe-b {
+  background: var(--blush);
 }
 
 .mosaic-row.wide,
@@ -503,6 +508,14 @@ a {
   line-height: 0;
   overflow: hidden;
   background: color-mix(in srgb, var(--ink) 6%, var(--blush));
+  opacity: 0;
+  transform: translateY(12px);
+  transition: opacity 0.55s ease, transform 0.55s ease;
+}
+
+.mosaic-row.is-visible .mosaic-item {
+  opacity: 1;
+  transform: none;
 }
 
 .mosaic-row.wide .mosaic-item {
@@ -530,16 +543,20 @@ a {
 }
 
 @media (min-width: 640px) {
-  .gallery.mosaic {
-    padding-left: max(1.25rem, env(safe-area-inset-left));
-    padding-right: max(1.25rem, env(safe-area-inset-right));
-    gap: 0.55rem;
-    max-width: 960px;
-    margin-inline: auto;
-  }
-
   .mosaic-row {
     gap: 0.55rem;
+    padding-top: 0.7rem;
+    padding-bottom: 0.7rem;
+    padding-left: max(
+      calc((100% - 960px) / 2),
+      1.25rem,
+      env(safe-area-inset-left)
+    );
+    padding-right: max(
+      calc((100% - 960px) / 2),
+      1.25rem,
+      env(safe-area-inset-right)
+    );
   }
 
   .mosaic-row.trio {
@@ -593,7 +610,7 @@ a {
     transition-duration: 0.01ms !important;
   }
 
-  .mosaic-row {
+  .mosaic-row .mosaic-item {
     opacity: 1;
     transform: none;
   }

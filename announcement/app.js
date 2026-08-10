@@ -176,20 +176,24 @@
     return rows;
   }
 
-  function renderGallery(container, photos) {
+  function renderGallery(container, photos, stripeOffset) {
     container.replaceChildren();
     container.classList.add("mosaic");
-    if (!photos.length) return;
+    if (!photos.length) return 0;
 
+    const offset = stripeOffset || 0;
     const rows = buildMosaic(photos, allowTrioLayout());
-    rows.forEach((row) => {
+    rows.forEach((row, index) => {
       const rowEl = document.createElement("div");
-      rowEl.className = "mosaic-row " + row.type;
+      const stripe =
+        (offset + index) % 2 === 0 ? "stripe-a" : "stripe-b";
+      rowEl.className = "mosaic-row " + row.type + " " + stripe;
       row.photos.forEach((photo) => {
         rowEl.appendChild(createGalleryItem(photo));
       });
       container.appendChild(rowEl);
     });
+    return rows.length;
   }
 
   function observeGallery() {
@@ -220,8 +224,8 @@
     cachedGalleryPhotos = photos;
     lastTrioPref = allowTrioLayout();
     const midpoint = Math.ceil(photos.length / 2);
-    renderGallery(galleryA, photos.slice(0, midpoint));
-    renderGallery(galleryB, photos.slice(midpoint));
+    const rowCountA = renderGallery(galleryA, photos.slice(0, midpoint), 0);
+    renderGallery(galleryB, photos.slice(midpoint), rowCountA);
     observeGallery();
   }
 
@@ -234,9 +238,10 @@
   const reduceMotionQuery = window.matchMedia(
     "(prefers-reduced-motion: reduce)"
   );
-  /** @type {{ left: number, top: number, w: number, h: number } | null} */
-  let heroEndRect = null;
+  /** @type {{ w: number, h: number } | null} */
+  let heroEndSize = null;
   let heroScrubRaf = 0;
+  let heroSlotSized = false;
 
   function clamp01(value) {
     return Math.min(1, Math.max(0, value));
@@ -269,37 +274,43 @@
       heroImage.style.maxHeight = "";
       heroImage.style.objectFit = "";
     }
+  }
+
+  function clearHeroSlotSize() {
+    heroSlotSized = false;
+    heroEndSize = null;
     if (heroMediaSlot) {
       heroMediaSlot.style.width = "";
       heroMediaSlot.style.height = "";
     }
   }
 
-  function measureHeroEndRect() {
-    if (!heroStage || !heroPin || !heroMedia) return null;
-    if (heroMedia.classList.contains("is-empty")) return null;
-    if (!heroImage || !heroImage.naturalWidth) return null;
+  /** Size the in-flow slot to the resting media box (no fixed scrub styles). */
+  function ensureHeroSlotSize() {
+    if (!heroMedia || !heroMediaSlot || !heroImage) return false;
+    if (heroMedia.classList.contains("is-empty")) return false;
+    if (!heroImage.naturalWidth) return false;
 
-    clearHeroScrubStyles();
-    const rect = heroMedia.getBoundingClientRect();
-    if (rect.width < 2 || rect.height < 2) return null;
-
-    if (heroMediaSlot) {
-      heroMediaSlot.style.width = rect.width + "px";
-      heroMediaSlot.style.height = rect.height + "px";
+    if (heroSlotSized && heroEndSize) {
+      heroMediaSlot.style.width = heroEndSize.w + "px";
+      heroMediaSlot.style.height = heroEndSize.h + "px";
+      return true;
     }
 
-    // Viewport coordinates (paired with position:fixed during scrub)
-    return {
-      left: rect.left,
-      top: rect.top,
-      w: rect.width,
-      h: rect.height,
-    };
-  }
+    const wasScrubbing = heroMedia.classList.contains("is-scrubbing");
+    if (wasScrubbing) {
+      // Never clear fixed mid-scroll just to measure — use cache only.
+      return Boolean(heroEndSize);
+    }
 
-  function refreshHeroEndRect() {
-    heroEndRect = measureHeroEndRect();
+    const rect = heroMedia.getBoundingClientRect();
+    if (rect.width < 2 || rect.height < 2) return false;
+
+    heroEndSize = { w: rect.width, h: rect.height };
+    heroMediaSlot.style.width = heroEndSize.w + "px";
+    heroMediaSlot.style.height = heroEndSize.h + "px";
+    heroSlotSized = true;
+    return true;
   }
 
   function applyHeroScrub() {
@@ -308,12 +319,14 @@
     if (prefersReducedMotion()) {
       heroStage.style.setProperty("--hero-progress", "1");
       clearHeroScrubStyles();
+      clearHeroSlotSize();
       return;
     }
 
     if (
       !heroMedia ||
       !heroPin ||
+      !heroMediaSlot ||
       heroMedia.classList.contains("is-empty") ||
       announcement.hidden
     ) {
@@ -324,31 +337,32 @@
 
     const range = heroStage.offsetHeight - window.innerHeight;
     const stageTop = heroStage.getBoundingClientRect().top;
-    const progress = range <= 0 ? 1 : clamp01(-stageTop / range);
+    // Finish the zoom/reveal through most of the stage; short hold after.
+    const SCRUB_END = 0.78;
+    const raw = range <= 0 ? 1 : clamp01(-stageTop / range);
+    const progress =
+      raw >= SCRUB_END ? 1 : clamp01(raw / SCRUB_END);
     heroStage.style.setProperty("--hero-progress", String(progress));
 
-    if (progress >= 0.995) {
+    // Only release fixed once the whole stage has scrolled past — not when
+    // zoom progress hits 1 (that was causing scroll-off / jump-back).
+    if (raw >= 0.999) {
       clearHeroScrubStyles();
+      clearHeroSlotSize();
       return;
     }
 
-    if (!heroEndRect) refreshHeroEndRect();
-    if (!heroEndRect) {
+    if (!ensureHeroSlotSize()) {
       clearHeroScrubStyles();
       return;
     }
 
     const pinRect = heroPin.getBoundingClientRect();
-    const left = lerp(pinRect.left, heroEndRect.left, progress);
-    const top = lerp(pinRect.top, heroEndRect.top, progress);
-    const width = lerp(pinRect.width, heroEndRect.w, progress);
-    const height = lerp(pinRect.height, heroEndRect.h, progress);
-
-    // Keep slot reserved so the band doesn't jump while media is fixed
-    if (heroMediaSlot) {
-      heroMediaSlot.style.width = heroEndRect.w + "px";
-      heroMediaSlot.style.height = heroEndRect.h + "px";
-    }
+    const endRect = heroMediaSlot.getBoundingClientRect();
+    const left = lerp(pinRect.left, endRect.left, progress);
+    const top = lerp(pinRect.top, endRect.top, progress);
+    const width = lerp(pinRect.width, endRect.width, progress);
+    const height = lerp(pinRect.height, endRect.height, progress);
 
     heroMedia.classList.add("is-scrubbing");
     heroMedia.classList.toggle("is-settling", progress >= 0.9);
@@ -367,13 +381,29 @@
   }
 
   function onHeroScrubResize() {
-    heroEndRect = null;
-    refreshHeroEndRect();
+    // Mid-scrub: keep the cached end size and just re-lerp to the new pin/slot
+    // (clearing fixed for a remeasure causes the scroll-off / jump-back glitch).
+    if (
+      heroMedia &&
+      heroMedia.classList.contains("is-scrubbing") &&
+      heroEndSize
+    ) {
+      heroMediaSlot.style.width = heroEndSize.w + "px";
+      heroMediaSlot.style.height = heroEndSize.h + "px";
+      scheduleHeroScrub();
+      return;
+    }
+    clearHeroScrubStyles();
+    clearHeroSlotSize();
+    ensureHeroSlotSize();
     applyHeroScrub();
   }
 
   window.addEventListener("scroll", scheduleHeroScrub, { passive: true });
   window.addEventListener("resize", onHeroScrubResize);
+  if (window.visualViewport) {
+    window.visualViewport.addEventListener("resize", onHeroScrubResize);
+  }
   if (typeof reduceMotionQuery.addEventListener === "function") {
     reduceMotionQuery.addEventListener("change", onHeroScrubResize);
   } else if (typeof reduceMotionQuery.addListener === "function") {
@@ -419,8 +449,9 @@
       const markLoaded = () => {
         heroImage.classList.add("is-loaded");
         window.requestAnimationFrame(() => {
-          heroEndRect = null;
-          refreshHeroEndRect();
+          clearHeroScrubStyles();
+          clearHeroSlotSize();
+          ensureHeroSlotSize();
           applyHeroScrub();
         });
       };
@@ -434,6 +465,7 @@
       heroMedia.classList.add("is-empty");
       heroImage.removeAttribute("src");
       clearHeroScrubStyles();
+      clearHeroSlotSize();
       if (heroStage) heroStage.style.setProperty("--hero-progress", "1");
     }
 
@@ -443,8 +475,9 @@
     paintGalleries(resolvedPhotos);
 
     window.requestAnimationFrame(() => {
-      heroEndRect = null;
-      refreshHeroEndRect();
+      clearHeroScrubStyles();
+      clearHeroSlotSize();
+      ensureHeroSlotSize();
       applyHeroScrub();
     });
   }

@@ -78,16 +78,15 @@
         settled = true;
         resolve();
       };
+      // Do not call img.decode() here — Safari rejects with "Load failed"
+      // when the image is under visibility/display hiding during boot.
       if (heroImage.complete && heroImage.naturalWidth) {
         finish();
         return;
       }
       heroImage.addEventListener("load", finish, { once: true });
       heroImage.addEventListener("error", finish, { once: true });
-      window.setTimeout(finish, 12000);
-      if (heroImage.decode) {
-        heroImage.decode().then(finish).catch(() => {});
-      }
+      window.setTimeout(finish, 8000);
     });
   }
 
@@ -604,13 +603,10 @@
 
     announcementRevealed = true;
     comingSoon.hidden = true;
-    // Stay blank + scroll-locked until the hero image is ready (not in admin preview).
-    if (!isPreview) {
-      setBooting(true);
-      announcement.hidden = true;
-    } else {
-      announcement.hidden = false;
-    }
+    // Keep announcement in the layout (not [hidden]/display:none) so iOS Safari
+    // can load the hero; is-booting only hides it visually + locks scroll.
+    announcement.hidden = false;
+    if (!isPreview) setBooting(true);
 
     firstNameEl.textContent = data.firstName.trim();
     middleLastEl.textContent = String(data.middleLast || "").trim();
@@ -646,7 +642,6 @@
       if (heroStage) heroStage.style.setProperty("--hero-progress", "1");
     }
 
-    announcement.hidden = false;
     if (!isPreview) setBooting(false);
 
     const resolvedPhotos = await photosPromise;

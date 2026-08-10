@@ -232,7 +232,11 @@
     renderGallery(galleryB, photos.slice(midpoint), rowCountA, 4);
   }
 
+  /** Once a real announcement has been shown, never flash Coming soon again. */
+  let announcementRevealed = false;
+
   function showComingSoon() {
+    if (announcementRevealed) return;
     comingSoon.hidden = false;
     announcement.hidden = true;
     document.title = "A New Arrival";
@@ -410,21 +414,22 @@
     if (!heroStage || heroIntroDone) return;
     heroIntroDone = true;
 
-    const stageTopDoc =
-      heroStage.getBoundingClientRect().top + window.scrollY;
-    const prevHeight = heroStage.offsetHeight;
-    const scrolledIntoStage = Math.max(0, window.scrollY - stageTopDoc);
-
     heroStage.classList.add("is-intro-done");
     heroStage.style.setProperty("--hero-progress", "1");
+    // Keep the end-size slot so fixed → in-flow handoff doesn't jump.
+    ensureHeroSlotSize();
     clearHeroScrubStyles();
-    clearHeroSlotSize();
 
-    const newHeight = heroStage.offsetHeight;
-    const delta = prevHeight - newHeight;
-    if (delta > 0 && scrolledIntoStage > 0) {
-      window.scrollBy(0, -Math.min(delta, scrolledIntoStage));
-    }
+    // Drop only the forced slot height after layout (width stays for landscape).
+    window.requestAnimationFrame(() => {
+      if (!heroMediaSlot || !heroEndSize) return;
+      heroMediaSlot.style.height = "";
+      heroSlotSized = false;
+      if (heroStage.classList.contains("is-landscape")) {
+        syncLandscapeStackWidth(heroEndSize);
+        heroMediaSlot.style.width = heroEndSize.w + "px";
+      }
+    });
   }
 
   function applyHeroScrub() {
@@ -449,10 +454,8 @@
 
     // After the first zoom completes, stay settled forever (no re-zoom on scroll up).
     if (heroIntroDone) {
-      heroStage.classList.add("is-intro-done");
       heroStage.style.setProperty("--hero-progress", "1");
       clearHeroScrubStyles();
-      clearHeroSlotSize();
       return;
     }
 
@@ -562,10 +565,14 @@
     }
 
     if (!hasAnnouncement(data)) {
+      // Keep showing the announcement if we already revealed it (e.g. brief
+      // empty preview payloads / flaky reloads must not flash Coming soon).
+      if (announcementRevealed) return;
       showComingSoon();
       return;
     }
 
+    announcementRevealed = true;
     comingSoon.hidden = true;
     announcement.hidden = false;
 
@@ -741,6 +748,9 @@
         return res.json();
       })
       .then((data) => render(data))
-      .catch(() => showComingSoon());
+      .catch(() => {
+        // Stay blank — never flash Coming soon on a load/network hiccup.
+        showBlank();
+      });
   }
 })();

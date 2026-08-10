@@ -120,15 +120,14 @@ a {
 
 /* Mobile + landscape hero: longer settled hold before the gallery */
 @media (max-width: 959px) {
-  .hero-stage.is-landscape:not(.is-intro-done) {
+  .hero-stage.is-landscape {
     height: 280dvh;
   }
 }
 
-/* After the first-load zoom, collapse to a normal hero (no re-scrub). */
+/* After the first-load zoom, stay settled (no re-scrub). Keep stage height
+   stable — collapsing 220dvh→100dvh mid-scroll causes mobile jitter. */
 .hero-stage.is-intro-done {
-  height: auto;
-  min-height: 100dvh;
   --hero-progress: 1;
 }
 

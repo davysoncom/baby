@@ -492,6 +492,7 @@
       }
 
       setStatus("Updating data.json…");
+      data.updatedAt = Date.now();
       const existingData = await githubGet(DATA_PATH, token);
       const json = JSON.stringify(data, null, 2) + "\n";
       await githubPut(
@@ -505,7 +506,10 @@
       field("heroFile").value = "";
       field("photoFiles").value = "";
       fillForm();
-      setStatus("Saved — site updates in about a minute.", "ok");
+      setStatus(
+        "Saved — announcement should refresh within a few seconds.",
+        "ok"
+      );
     } catch (err) {
       console.error(err);
       setStatus(err.message || String(err), "error");

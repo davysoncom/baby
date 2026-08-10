@@ -1,4 +1,10 @@
 (function () {
+  // Load data/photos from raw GitHub so hospital saves appear in seconds
+  // (skip waiting for GitHub Pages rebuild). HTML/CSS/JS still come from Pages.
+  const RAW_BASE =
+    "https://raw.githubusercontent.com/davysoncom/baby/main/announcement/";
+  const DATA_URL = RAW_BASE + "data.json";
+
   const comingSoon = document.getElementById("coming-soon");
   const announcement = document.getElementById("announcement");
   const heroStage = document.querySelector(".hero-stage");
@@ -10,6 +16,9 @@
   const galleryA = document.getElementById("gallery-a");
   const galleryB = document.getElementById("gallery-b");
 
+  /** @type {string|number} */
+  let assetVersion = "";
+
   function orientOf(width, height) {
     if (!width || !height) return "portrait";
     const ratio = width / height;
@@ -18,14 +27,24 @@
     return "square";
   }
 
-  function normalizePhoto(entry) {
+  function resolveAssetUrl(src, useRaw) {
+    if (!src) return "";
+    if (/^https?:\/\//i.test(src) || src.startsWith("data:")) return src;
+    // Demo paths like ../alex/... stay relative to the page
+    if (!useRaw || src.startsWith("../") || src.startsWith("/")) return src;
+    const path = src.replace(/^\.\//, "");
+    const url = RAW_BASE + path;
+    return assetVersion ? url + "?v=" + encodeURIComponent(assetVersion) : url;
+  }
+
+  function normalizePhoto(entry, useRaw) {
     if (!entry) return null;
     if (typeof entry === "string") {
-      return { src: entry, orient: "" };
+      return { src: resolveAssetUrl(entry, useRaw), orient: "" };
     }
     if (!entry.src) return null;
     return {
-      src: entry.src,
+      src: resolveAssetUrl(entry.src, useRaw),
       orient: entry.orient || "",
     };
   }
@@ -202,7 +221,10 @@
     document.title = "A New Arrival";
   }
 
-  async function render(data) {
+  async function render(data, options) {
+    const useRaw = !options || options.useRaw !== false;
+    assetVersion = (data && (data.updatedAt || data.v)) || "";
+
     if (!isLive(data)) {
       showComingSoon();
       return;
@@ -217,7 +239,7 @@
     buildDetails(data);
     document.title = data.firstName.trim() + " — A New Arrival";
 
-    const hero = normalizePhoto(data.hero);
+    const hero = normalizePhoto(data.hero, useRaw);
     const orientClasses = ["is-portrait", "is-landscape", "is-square"];
     heroMedia.classList.remove("is-empty", ...orientClasses);
     if (heroStage) heroStage.classList.remove(...orientClasses);
@@ -238,7 +260,7 @@
     }
 
     const photos = (data.photos || [])
-      .map(normalizePhoto)
+      .map((entry) => normalizePhoto(entry, useRaw))
       .filter(Boolean);
 
     const resolvedPhotos = await Promise.all(photos.map(ensureOrient));
@@ -313,14 +335,24 @@
 
   const demo = demoMode();
   if (demo) {
-    render(demoData(demo === "landscape"));
+    render(demoData(demo === "landscape"), { useRaw: false });
   } else {
-    fetch("data.json", { cache: "no-store" })
+    const url = DATA_URL + "?t=" + Date.now();
+    fetch(url, { cache: "no-store" })
       .then((res) => {
         if (!res.ok) throw new Error("Failed to load data.json");
         return res.json();
       })
-      .then(render)
-      .catch(() => showComingSoon());
+      .then((data) => render(data, { useRaw: true }))
+      .catch(() => {
+        // Fallback to Pages-relative file if raw is unavailable
+        fetch("data.json", { cache: "no-store" })
+          .then((res) => {
+            if (!res.ok) throw new Error("Failed to load data.json");
+            return res.json();
+          })
+          .then((data) => render(data, { useRaw: false }))
+          .catch(() => showComingSoon());
+      });
   }
 })();

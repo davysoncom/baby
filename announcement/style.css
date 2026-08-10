@@ -108,14 +108,22 @@ a {
   container-name: hero;
 }
 
-/* Landscape stays stacked at every width — column grows with the viewport */
+/* Landscape: stack; info band matches the rendered image width */
 .hero-stage.is-landscape .hero {
-  width: min(100%, clamp(26.5rem, 92vw, 64rem));
+  width: fit-content;
+  max-width: min(100%, 64rem);
+  align-items: stretch;
+}
+
+.hero-stage.is-landscape .hero-media {
+  width: fit-content;
+  max-width: 100%;
 }
 
 .hero-stage.is-landscape .hero-band {
-  width: min(100%, 26.5rem);
-  margin-inline: auto;
+  width: auto;
+  align-self: stretch;
+  box-sizing: border-box;
 }
 
 .scroll-hint {

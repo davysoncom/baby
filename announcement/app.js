@@ -294,6 +294,19 @@
     paintGalleries(cachedGalleryPhotos);
   });
 
+  // <base href="/announcement/"> would turn href="#gallery-a" into
+  // /announcement/#gallery-a — keep scroll on the current URL (incl. root).
+  const scrollHint = document.querySelector(".scroll-hint");
+  if (scrollHint) {
+    scrollHint.addEventListener("click", (event) => {
+      event.preventDefault();
+      const target = document.getElementById("gallery-a");
+      if (target) {
+        target.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+    });
+  }
+
   // Preview: /announcement/#demo or #demo-landscape
   const DEMO_PHOTOS = [
     { src: "../alex/IMG_3591.jpeg", orient: "portrait" },

@@ -6,71 +6,10 @@
   "time": "20:40 PM",
   "weightKg": "3.6 kg",
   "weightLbOz": "7lbs 4oz",
-  "updatedAt": 1786405259012,
+  "updatedAt": 1786405269860,
   "hero": {
     "src": "photos/hero-20260811-005440-lugg.jpg",
     "orient": "portrait"
   },
-  "photos": [
-    {
-      "src": "photos/photo-20260810-225315-sula.jpg",
-      "orient": "landscape"
-    },
-    {
-      "src": "photos/photo-20260810-225318-lp3n.jpg",
-      "orient": "landscape"
-    },
-    {
-      "src": "photos/photo-20260810-225320-q09w.jpg",
-      "orient": "landscape"
-    },
-    {
-      "src": "photos/photo-20260811-005523-brvz.jpg",
-      "orient": "landscape"
-    },
-    {
-      "src": "photos/photo-20260811-005525-h2yn.jpg",
-      "orient": "landscape"
-    },
-    {
-      "src": "photos/photo-20260811-005527-a8ra.jpg",
-      "orient": "landscape"
-    },
-    {
-      "src": "photos/photo-20260811-005528-cqsm.jpg",
-      "orient": "landscape"
-    },
-    {
-      "src": "photos/photo-20260811-005530-uhxw.jpg",
-      "orient": "portrait"
-    },
-    {
-      "src": "photos/photo-20260811-005531-dz5l.jpg",
-      "orient": "landscape"
-    },
-    {
-      "src": "photos/photo-20260811-005604-c8qk.jpg",
-      "orient": "landscape"
-    },
-    {
-      "src": "photos/photo-20260811-005605-wsyn.jpg",
-      "orient": "landscape"
-    },
-    {
-      "src": "photos/photo-20260811-005607-1r4x.jpg",
-      "orient": "landscape"
-    },
-    {
-      "src": "photos/photo-20260811-005609-y4b7.jpg",
-      "orient": "landscape"
-    },
-    {
-      "src": "photos/photo-20260811-005610-q06o.jpg",
-      "orient": "portrait"
-    },
-    {
-      "src": "photos/photo-20260811-005612-0zr1.jpg",
-      "orient": "landscape"
-    }
-  ]
+  "photos": []
 }

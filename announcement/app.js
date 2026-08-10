@@ -1,11 +1,5 @@
 (function () {
-  // Load data/photos from raw GitHub so hospital saves appear in seconds
-  // (skip waiting for GitHub Pages rebuild). HTML/CSS/JS still come from Pages.
-  // Use refs/heads/main — the short /main/ raw URL 404s for this repo.
-  const RAW_BASE =
-    "https://raw.githubusercontent.com/davysoncom/baby/refs/heads/main/announcement/";
-  const DATA_URL = RAW_BASE + "data.json";
-
+  // Assets load from GitHub Pages (repo stays private — no public raw URLs).
   const comingSoon = document.getElementById("coming-soon");
   const announcement = document.getElementById("announcement");
   const heroStage = document.querySelector(".hero-stage");
@@ -28,24 +22,24 @@
     return "square";
   }
 
-  function resolveAssetUrl(src, useRaw) {
+  function resolveAssetUrl(src) {
     if (!src) return "";
     if (/^https?:\/\//i.test(src) || src.startsWith("data:")) return src;
-    // Demo paths like ../alex/... stay relative to the page
-    if (!useRaw || src.startsWith("../") || src.startsWith("/")) return src;
+    if (src.startsWith("../") || src.startsWith("/")) return src;
     const path = src.replace(/^\.\//, "");
-    const url = RAW_BASE + path;
-    return assetVersion ? url + "?v=" + encodeURIComponent(assetVersion) : url;
+    return assetVersion
+      ? path + "?v=" + encodeURIComponent(assetVersion)
+      : path;
   }
 
-  function normalizePhoto(entry, useRaw) {
+  function normalizePhoto(entry) {
     if (!entry) return null;
     if (typeof entry === "string") {
-      return { src: resolveAssetUrl(entry, useRaw), orient: "" };
+      return { src: resolveAssetUrl(entry), orient: "" };
     }
     if (!entry.src) return null;
     return {
-      src: resolveAssetUrl(entry.src, useRaw),
+      src: resolveAssetUrl(entry.src),
       orient: entry.orient || "",
     };
   }
@@ -236,11 +230,10 @@
   }
 
   async function render(data, options) {
-    const useRaw = !options || options.useRaw !== false;
     const isDemo = Boolean(options && options.demo);
     assetVersion = (data && (data.updatedAt || data.v)) || "";
 
-    // Root URL: blank until data.live (updates instantly via raw data.json)
+    // Root URL: blank until data.live (waits on GitHub Pages after admin save)
     if (requiresPublicLive() && !isDemo && !data.live) {
       showBlank();
       return;
@@ -260,7 +253,7 @@
     buildDetails(data);
     document.title = data.firstName.trim() + " — A New Arrival";
 
-    const hero = normalizePhoto(data.hero, useRaw);
+    const hero = normalizePhoto(data.hero);
     const orientClasses = ["is-portrait", "is-landscape", "is-square"];
     heroMedia.classList.remove("is-empty", ...orientClasses);
     if (heroStage) heroStage.classList.remove(...orientClasses);
@@ -280,9 +273,7 @@
       heroImage.removeAttribute("src");
     }
 
-    const photos = (data.photos || [])
-      .map((entry) => normalizePhoto(entry, useRaw))
-      .filter(Boolean);
+    const photos = (data.photos || []).map(normalizePhoto).filter(Boolean);
 
     const resolvedPhotos = await Promise.all(photos.map(ensureOrient));
     paintGalleries(resolvedPhotos);
@@ -368,21 +359,16 @@
     return null;
   }
 
-  function loadFrom(url, useRaw) {
-    return fetch(url, { cache: "no-store" }).then((res) => {
-      if (!res.ok) throw new Error("Failed to load data.json");
-      return res.json().then((data) => render(data, { useRaw: useRaw }));
-    });
-  }
-
   const demo = demoMode();
   if (demo) {
-    render(demoData(demo === "landscape"), { useRaw: false, demo: true });
+    render(demoData(demo === "landscape"), { demo: true });
   } else {
-    // Prefer raw GitHub for fast updates after admin saves. Falls back to
-    // Pages if raw is unavailable (e.g. private repo before it's public).
-    loadFrom(DATA_URL + "?t=" + Date.now(), true).catch(() =>
-      loadFrom("data.json?t=" + Date.now(), false).catch(() => showComingSoon())
-    );
+    fetch("data.json?t=" + Date.now(), { cache: "no-store" })
+      .then((res) => {
+        if (!res.ok) throw new Error("Failed to load data.json");
+        return res.json();
+      })
+      .then((data) => render(data))
+      .catch(() => showComingSoon());
   }
 })();

@@ -3,10 +3,6 @@
   const REPO = "baby";
   const BRANCH = "main";
   const DATA_PATH = "announcement/data.json";
-  const DATA_RAW_URL =
-    "https://raw.githubusercontent.com/davysoncom/baby/refs/heads/main/announcement/data.json";
-  const ASSET_RAW_BASE =
-    "https://raw.githubusercontent.com/davysoncom/baby/refs/heads/main/announcement/";
   const PHOTOS_PREFIX = "announcement/photos/";
   const TOKEN_KEY = "babyAdminToken";
   const MAX_EDGE = 1800;
@@ -122,17 +118,11 @@
   function assetPreviewUrl(src) {
     if (!src) return "";
     if (/^https?:\/\//i.test(src)) return src;
-    const rel = src.replace(/^announcement\//, "").replace(/^\.\//, "");
-    const bust = data.updatedAt ? "?v=" + encodeURIComponent(data.updatedAt) : "";
-    // Prefer raw (fast); Pages path as img onerror fallback via JS below
-    return ASSET_RAW_BASE + rel + bust;
-  }
-
-  function pagesPreviewUrl(src) {
-    const rel = String(src || "")
+    const rel = String(src)
       .replace(/^announcement\//, "")
       .replace(/^\.\//, "");
-    return "../announcement/" + rel;
+    const bust = data.updatedAt ? "?v=" + encodeURIComponent(data.updatedAt) : "";
+    return "../announcement/" + rel + bust;
   }
 
   function renderPhotoThumb(src, orient, onRemove) {
@@ -143,11 +133,6 @@
     img.src = assetPreviewUrl(src);
     img.alt = "";
     img.loading = "lazy";
-    img.onerror = () => {
-      if (img.dataset.fallback === "1") return;
-      img.dataset.fallback = "1";
-      img.src = pagesPreviewUrl(src);
-    };
 
     const meta = document.createElement("div");
     meta.className = "photo-meta";
@@ -179,11 +164,6 @@
       const img = document.createElement("img");
       img.src = assetPreviewUrl(data.hero.src);
       img.alt = "Current hero";
-      img.onerror = () => {
-        if (img.dataset.fallback === "1") return;
-        img.dataset.fallback = "1";
-        img.src = pagesPreviewUrl(data.hero.src);
-      };
       const removeBtn = document.createElement("button");
       removeBtn.type = "button";
       removeBtn.className = "remove-photo";
@@ -443,10 +423,10 @@
   async function refreshLiveStatus() {
     if (!liveStatus) return;
     try {
-      const res = await fetch(DATA_RAW_URL + "?t=" + Date.now(), {
+      const res = await fetch("../announcement/data.json?t=" + Date.now(), {
         cache: "no-store",
       });
-      if (!res.ok) throw new Error("raw fetch failed");
+      if (!res.ok) throw new Error("data fetch failed");
       const remote = await res.json();
       data.live = Boolean(remote.live);
       applyLiveStatus(data.live);
@@ -516,8 +496,8 @@
       applyLiveStatus(data.live);
       setStatus(
         live
-          ? "Live at baby.davyson.com — should appear within a few seconds."
-          : "Root blank again — should update within a few seconds.",
+          ? "Live at baby.davyson.com — site updates in about a minute."
+          : "Root blank again — site updates in about a minute.",
         "ok"
       );
     } catch (err) {
@@ -605,10 +585,7 @@
       field("photoFiles").value = "";
       fillForm();
       applyLiveStatus(Boolean(data.live));
-      setStatus(
-        "Saved — announcement should refresh within a few seconds.",
-        "ok"
-      );
+      setStatus("Saved — site updates in about a minute.", "ok");
     } catch (err) {
       console.error(err);
       setStatus(err.message || String(err), "error");

@@ -307,6 +307,11 @@
     return prefix + stamp + "." + ext;
   }
 
+  function decodeGithubContent(file) {
+    if (!file || !file.content) return "";
+    return decodeURIComponent(escape(atob(file.content.replace(/\n/g, ""))));
+  }
+
   async function loadData() {
     // Prefer live file from Pages/raw for prefill when no token yet
     try {
@@ -330,10 +335,7 @@
 
     const file = await githubGet(DATA_PATH, token);
     if (file && file.content) {
-      const json = decodeURIComponent(
-        escape(atob(file.content.replace(/\n/g, "")))
-      );
-      data = JSON.parse(json);
+      data = JSON.parse(decodeGithubContent(file));
     }
     fillForm();
   }

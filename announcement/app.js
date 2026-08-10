@@ -49,8 +49,21 @@
     };
   }
 
-  function isLive(data) {
+  function hasAnnouncement(data) {
     return Boolean(data && String(data.firstName || "").trim());
+  }
+
+  /** Root stays blank until data.live; /announcement/ can preview earlier. */
+  function requiresPublicLive() {
+    const path = window.location.pathname || "/";
+    if (path.includes("/announcement")) return false;
+    return path === "/" || /\/index\.html$/i.test(path);
+  }
+
+  function showBlank() {
+    if (comingSoon) comingSoon.hidden = true;
+    if (announcement) announcement.hidden = true;
+    document.title = "";
   }
 
   function buildDetails(data) {
@@ -223,9 +236,16 @@
 
   async function render(data, options) {
     const useRaw = !options || options.useRaw !== false;
+    const isDemo = Boolean(options && options.demo);
     assetVersion = (data && (data.updatedAt || data.v)) || "";
 
-    if (!isLive(data)) {
+    // Root URL: blank until data.live (updates instantly via raw data.json)
+    if (requiresPublicLive() && !isDemo && !data.live) {
+      showBlank();
+      return;
+    }
+
+    if (!hasAnnouncement(data)) {
       showComingSoon();
       return;
     }
@@ -292,6 +312,7 @@
 
   function demoData(heroLandscape) {
     return {
+      live: true,
       firstName: "Clara",
       middleLast: "Elodie Davyson",
       date: "31.07.2026",
@@ -335,7 +356,7 @@
 
   const demo = demoMode();
   if (demo) {
-    render(demoData(demo === "landscape"), { useRaw: false });
+    render(demoData(demo === "landscape"), { useRaw: false, demo: true });
   } else {
     const url = DATA_URL + "?t=" + Date.now();
     fetch(url, { cache: "no-store" })

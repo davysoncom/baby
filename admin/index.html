@@ -311,22 +311,23 @@
       <div class="actions">
         <button type="submit" class="primary" id="save">Save to site</button>
         <p class="hint">
-          Details and photos usually appear within a few seconds (loaded via
-          GitHub raw). Go live is only needed for the root URL.
+          Details and photos usually appear within a few seconds at
+          <strong>/announcement/</strong> (via GitHub raw).
         </p>
         <p id="status" class="status" role="status"></p>
       </div>
 
       <div class="token-box">
-        <div id="live-status" class="token-status">Checking root…</div>
+        <div id="live-status" class="token-status">Checking live flag…</div>
         <p class="hint">
-          Saving updates the announcement content. Tap Go live to serve that
-          page at <strong>baby.davyson.com</strong> (same URL, no redirect).
-          Unpublish blanks the root again.
+          Go live sets <code>live: true</code> in data.json so
+          <strong>baby.davyson.com</strong> shows the announcement within
+          seconds. Preview anytime at /announcement/. Unpublish sets
+          <code>live: false</code>.
         </p>
         <button type="button" class="primary" id="go-live">Go live at root</button>
         <button type="button" class="secondary" id="unpublish">
-          Unpublish root (blank again)
+          Unpublish root
         </button>
       </div>
     </form>

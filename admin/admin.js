@@ -3,13 +3,12 @@
   const REPO = "baby";
   const BRANCH = "main";
   const DATA_PATH = "announcement/data.json";
-  const ROOT_INDEX_PATH = "index.html";
+  const DATA_RAW_URL =
+    "https://raw.githubusercontent.com/davysoncom/baby/main/announcement/data.json";
   const PHOTOS_PREFIX = "announcement/photos/";
   const TOKEN_KEY = "babyAdminToken";
   const MAX_EDGE = 1800;
   const JPEG_QUALITY = 0.82;
-  const BLANK_ROOT_HTML = "";
-  const ANN_INDEX_PATH = "announcement/index.html";
 
   const form = document.getElementById("admin-form");
   const tokenInput = document.getElementById("token");
@@ -27,6 +26,7 @@
 
   /** @type {any} */
   let data = {
+    live: false,
     firstName: "",
     middleLast: "",
     date: "",
@@ -362,50 +362,30 @@
     refreshWeightAdvice();
   });
 
-  function isRootLive(html) {
-    const text = html || "";
-    if (!text.trim()) return false;
-    // Live root serves the announcement page (with base href), not a redirect
-    return (
-      /base\s+href=["']\/announcement\/["']/i.test(text) ||
-      (/hero-stage/i.test(text) && !/http-equiv=["']refresh/i.test(text))
-    );
+  function applyLiveStatus(isLive) {
+    if (!liveStatus) return;
+    if (isLive) {
+      liveStatus.textContent = "Root is live (data.live = true).";
+      liveStatus.classList.add("ok");
+    } else {
+      liveStatus.textContent = "Root is blank (data.live = false).";
+      liveStatus.classList.remove("ok");
+    }
   }
 
   async function refreshLiveStatus() {
     if (!liveStatus) return;
     try {
-      const res = await fetch("../index.html", { cache: "no-store" });
-      if (!res.ok) {
-        liveStatus.textContent = "Could not read root page.";
-        liveStatus.classList.remove("ok");
-        return;
-      }
-      const html = await res.text();
-      if (isRootLive(html)) {
-        liveStatus.textContent = "Root is live (announcement at baby.davyson.com).";
-        liveStatus.classList.add("ok");
-      } else {
-        liveStatus.textContent = "Root is blank (not live yet).";
-        liveStatus.classList.remove("ok");
-      }
+      const res = await fetch(DATA_RAW_URL + "?t=" + Date.now(), {
+        cache: "no-store",
+      });
+      if (!res.ok) throw new Error("raw fetch failed");
+      const remote = await res.json();
+      data.live = Boolean(remote.live);
+      applyLiveStatus(data.live);
     } catch (_) {
-      liveStatus.textContent = "Could not read root page.";
-      liveStatus.classList.remove("ok");
+      applyLiveStatus(Boolean(data.live));
     }
-  }
-
-  function buildLiveRootHtml(announcementHtml) {
-    let html = String(announcementHtml || "");
-    html = html.replace(/\s*<base\b[^>]*>/gi, "");
-    html = html.replace(/\s*<link\s+rel=["']canonical["'][^>]*>/gi, "");
-    if (!/<head[\s>]/i.test(html)) {
-      throw new Error("announcement/index.html is missing a <head>");
-    }
-    return html.replace(
-      /<head([^>]*)>/i,
-      '<head$1>\n    <base href="/announcement/" />\n    <link rel="canonical" href="/" />'
-    );
   }
 
   async function ensureToken() {
@@ -422,26 +402,55 @@
     return token;
   }
 
-  async function writeRootIndex(html, message) {
+  function readFormFieldsIntoData() {
+    data.firstName = field("firstName").value.trim();
+    data.middleLast = field("middleLast").value.trim();
+    data.date = field("date").value.trim();
+    data.time = field("time").value.trim();
+    data.weightKg = field("weightKg").value.trim();
+    data.weightLbOz = field("weightLbOz").value.trim();
+    if (!Array.isArray(data.photos)) data.photos = [];
+    if (!data.hero || typeof data.hero === "string") {
+      data.hero = {
+        src: typeof data.hero === "string" ? data.hero : "",
+        orient: "portrait",
+      };
+    }
+  }
+
+  async function saveDataJson(token, message) {
+    data.updatedAt = Date.now();
+    const existingData = await githubGet(DATA_PATH, token);
+    const json = JSON.stringify(data, null, 2) + "\n";
+    await githubPut(
+      DATA_PATH,
+      textToBase64(json),
+      message,
+      token,
+      existingData && existingData.sha
+    );
+  }
+
+  async function setLiveFlag(live) {
     const token = await ensureToken();
     if (!token) return;
     goLiveBtn.disabled = true;
     unpublishBtn.disabled = true;
-    setStatus(message.startsWith("Unpublish") ? "Unpublishing…" : "Going live…");
+    setStatus(live ? "Going live…" : "Unpublishing…");
     try {
-      const existing = await githubGet(ROOT_INDEX_PATH, token);
-      await githubPut(
-        ROOT_INDEX_PATH,
-        textToBase64(html),
-        message,
+      readFormFieldsIntoData();
+      data.live = Boolean(live);
+      await saveDataJson(
         token,
-        existing && existing.sha
+        live
+          ? "Go live: set announcement data.live true"
+          : "Unpublish: set announcement data.live false"
       );
-      await refreshLiveStatus();
+      applyLiveStatus(data.live);
       setStatus(
-        message.startsWith("Unpublish")
-          ? "Root blank again — site updates in about a minute."
-          : "Live at baby.davyson.com — updates in about a minute.",
+        live
+          ? "Live at baby.davyson.com — should appear within a few seconds."
+          : "Root blank again — should update within a few seconds.",
         "ok"
       );
     } catch (err) {
@@ -453,41 +462,8 @@
     }
   }
 
-  goLiveBtn.addEventListener("click", async () => {
-    const token = await ensureToken();
-    if (!token) return;
-    goLiveBtn.disabled = true;
-    unpublishBtn.disabled = true;
-    setStatus("Going live…");
-    try {
-      const page = await githubGet(ANN_INDEX_PATH, token);
-      if (!page) throw new Error("announcement/index.html not found on GitHub");
-      const html = buildLiveRootHtml(decodeGithubContent(page));
-      const existing = await githubGet(ROOT_INDEX_PATH, token);
-      await githubPut(
-        ROOT_INDEX_PATH,
-        textToBase64(html),
-        "Go live: serve announcement at site root",
-        token,
-        existing && existing.sha
-      );
-      await refreshLiveStatus();
-      setStatus(
-        "Live at baby.davyson.com — content is on the root URL. Updates in about a minute.",
-        "ok"
-      );
-    } catch (err) {
-      console.error(err);
-      setStatus(err.message || String(err), "error");
-    } finally {
-      goLiveBtn.disabled = false;
-      unpublishBtn.disabled = false;
-    }
-  });
-
-  unpublishBtn.addEventListener("click", () => {
-    writeRootIndex(BLANK_ROOT_HTML, "Unpublish: blank out root index.html");
-  });
+  goLiveBtn.addEventListener("click", () => setLiveFlag(true));
+  unpublishBtn.addEventListener("click", () => setLiveFlag(false));
 
   form.addEventListener("submit", async (event) => {
     event.preventDefault();
@@ -509,20 +485,9 @@
     setStatus("Saving…");
 
     try {
-      data.firstName = field("firstName").value.trim();
-      data.middleLast = field("middleLast").value.trim();
-      data.date = field("date").value.trim();
-      data.time = field("time").value.trim();
-      data.weightKg = field("weightKg").value.trim();
-      data.weightLbOz = field("weightLbOz").value.trim();
-
-      if (!Array.isArray(data.photos)) data.photos = [];
-      if (!data.hero || typeof data.hero === "string") {
-        data.hero = {
-          src: typeof data.hero === "string" ? data.hero : "",
-          orient: "portrait",
-        };
-      }
+      readFormFieldsIntoData();
+      // Preserve live flag across ordinary saves
+      data.live = Boolean(data.live);
 
       const heroFile = field("heroFile").files[0];
       if (heroFile) {
@@ -567,20 +532,12 @@
       }
 
       setStatus("Updating data.json…");
-      data.updatedAt = Date.now();
-      const existingData = await githubGet(DATA_PATH, token);
-      const json = JSON.stringify(data, null, 2) + "\n";
-      await githubPut(
-        DATA_PATH,
-        textToBase64(json),
-        "Update announcement details",
-        token,
-        existingData && existingData.sha
-      );
+      await saveDataJson(token, "Update announcement details");
 
       field("heroFile").value = "";
       field("photoFiles").value = "";
       fillForm();
+      applyLiveStatus(Boolean(data.live));
       setStatus(
         "Saved — announcement should refresh within a few seconds.",
         "ok"

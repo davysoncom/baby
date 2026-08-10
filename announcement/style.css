@@ -82,11 +82,27 @@ a {
 /* Hero — sticky scroll scrub:
    start full-bleed cover → zoom into fitted layout; details near end. */
 .hero-stage {
-  --hero-chrome: clamp(10.5rem, 16vh, 12.5rem);
+  --hero-chrome: clamp(11.5rem, 18vh, 13.5rem);
   --hero-progress: 0;
-  --hero-reveal: clamp(
+  /* Name after the photo has shrunk enough to clear the nameplate */
+  --hero-name-reveal: clamp(
     0,
-    calc((var(--hero-progress) - 0.78) / 0.22),
+    calc((var(--hero-progress) - 0.52) / 0.18),
+    1
+  );
+  /* Name starts larger and scales down to the final size */
+  --hero-name-settle: clamp(
+    0,
+    calc((var(--hero-progress) - 0.52) / 0.32),
+    1
+  );
+  --hero-name-scale: calc(1.28 - 0.28 * var(--hero-name-settle));
+  /* Extra air between photo and oversized name, eases out as it settles */
+  --hero-name-gap: calc((1 - var(--hero-name-settle)) * 1.25rem);
+  /* Middle name + birth details arrive near the end */
+  --hero-details-reveal: clamp(
+    0,
+    calc((var(--hero-progress) - 0.84) / 0.16),
     1
   );
   --hero-hint: clamp(0, calc((0.55 - var(--hero-progress)) / 0.55), 1);
@@ -94,6 +110,19 @@ a {
   /* Tall stage: zoom/reveal, then a short hold before the gallery. */
   height: 220dvh;
   box-sizing: border-box;
+}
+
+/* Landscape needs more room under the wide photo for the nameplate */
+.hero-stage.is-landscape {
+  --hero-chrome: clamp(13rem, 24vh, 16rem);
+  --hero-name-gap: calc((1 - var(--hero-name-settle)) * 1.6rem);
+}
+
+/* After the first-load zoom, collapse to a normal hero (no re-scrub). */
+.hero-stage.is-intro-done {
+  height: auto;
+  min-height: 100dvh;
+  --hero-progress: 1;
 }
 
 .hero-pin {
@@ -182,6 +211,7 @@ a {
   width: 100%;
   min-height: 0;
   flex: 0 1 auto;
+  margin-bottom: var(--hero-name-gap, 0px);
 }
 
 .hero-media {
@@ -245,13 +275,13 @@ a {
 .hero-band {
   width: 100%;
   flex: 0 0 auto;
-  padding: 1rem 1.15rem 1.15rem;
+  padding: calc(1rem + var(--hero-name-gap, 0px) * 0.35) 1.15rem 1.15rem;
   text-align: center;
   background: color-mix(in srgb, var(--band) 82%, #fff);
   position: relative;
-  z-index: 1;
-  opacity: var(--hero-reveal);
-  transform: translateY(calc((1 - var(--hero-reveal)) * 14px));
+  z-index: 5;
+  opacity: var(--hero-name-reveal);
+  transform: translateY(calc((1 - var(--hero-name-reveal)) * 12px));
   will-change: opacity, transform;
 }
 
@@ -264,25 +294,38 @@ a {
   line-height: 0.95;
   letter-spacing: -0.03em;
   overflow-wrap: anywhere;
+  transform: scale(var(--hero-name-scale));
+  /* Grow downward so the oversized name doesn't collide with the photo */
+  transform-origin: center top;
+  will-change: transform;
 }
 
 .middle-last {
-  margin: 0.55rem 0 0;
+  margin: calc(0.55rem * var(--hero-details-reveal)) 0 0;
   font-family: var(--font-body);
   font-size: clamp(1rem, 5cqi, 1.25rem);
   font-weight: 500;
   letter-spacing: 0.04em;
+  opacity: var(--hero-details-reveal);
+  transform: translateY(calc((1 - var(--hero-details-reveal)) * 10px));
+  max-height: calc(var(--hero-details-reveal) * 4rem);
+  overflow: hidden;
 }
 
 .details {
-  margin-top: 0.85rem;
+  margin-top: calc(0.85rem * var(--hero-details-reveal));
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
-  gap: 0.3rem 0.5rem;
+  gap: calc(0.3rem * var(--hero-details-reveal))
+    calc(0.5rem * var(--hero-details-reveal));
   font-size: clamp(0.88rem, 4cqi, 1.02rem);
   font-weight: 500;
   color: color-mix(in srgb, var(--ink) 82%, var(--accent));
+  opacity: var(--hero-details-reveal);
+  transform: translateY(calc((1 - var(--hero-details-reveal)) * 10px));
+  max-height: calc(var(--hero-details-reveal) * 6rem);
+  overflow: hidden;
 }
 
 .details .sep {
@@ -355,6 +398,17 @@ a {
     will-change: auto;
   }
 
+  .first-name {
+    transform: none;
+    will-change: auto;
+  }
+
+  .middle-last,
+  .details {
+    opacity: 1;
+    transform: none;
+  }
+
   .scroll-hint {
     animation: none;
     opacity: 0.7;
@@ -420,7 +474,7 @@ a {
 
   .hero-stage.is-portrait .middle-last,
   .hero-stage.is-square .middle-last {
-    margin-top: 0.55rem;
+    margin-top: calc(0.55rem * var(--hero-details-reveal));
     font-size: clamp(1rem, 1.4vw, 1.2rem);
     font-weight: 500;
     letter-spacing: 0.04em;
@@ -433,8 +487,9 @@ a {
     flex-wrap: wrap;
     justify-content: center;
     align-items: center;
-    gap: 0.3rem 0.5rem;
-    margin-top: 0.85rem;
+    gap: calc(0.3rem * var(--hero-details-reveal))
+      calc(0.5rem * var(--hero-details-reveal));
+    margin-top: calc(0.85rem * var(--hero-details-reveal));
     padding-top: 0;
     border-top: 0;
     font-size: clamp(0.88rem, 1.15vw, 1.02rem);
@@ -508,14 +563,6 @@ a {
   line-height: 0;
   overflow: hidden;
   background: color-mix(in srgb, var(--ink) 6%, var(--blush));
-  opacity: 0;
-  transform: translateY(12px);
-  transition: opacity 0.55s ease, transform 0.55s ease;
-}
-
-.mosaic-row.is-visible .mosaic-item {
-  opacity: 1;
-  transform: none;
 }
 
 .mosaic-row.wide .mosaic-item {
@@ -610,11 +657,6 @@ a {
     transition-duration: 0.01ms !important;
   }
 
-  .mosaic-row .mosaic-item {
-    opacity: 1;
-    transform: none;
-  }
-
   .hero-media img {
     opacity: 1;
   }
@@ -631,6 +673,16 @@ a {
   }
 
   .hero-band {
+    opacity: 1 !important;
+    transform: none !important;
+  }
+
+  .first-name {
+    transform: none !important;
+  }
+
+  .middle-last,
+  .details {
     opacity: 1 !important;
     transform: none !important;
   }

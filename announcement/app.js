@@ -103,7 +103,16 @@
     });
   }
 
-  function createGalleryItem(photo) {
+  function prefetchPhotos(photos) {
+    (photos || []).forEach((photo) => {
+      if (!photo || !photo.src) return;
+      const img = new Image();
+      img.decoding = "async";
+      img.src = photo.src;
+    });
+  }
+
+  function createGalleryItem(photo, options) {
     const figure = document.createElement("figure");
     figure.className =
       "mosaic-item is-" + (photo.orient || "portrait");
@@ -111,7 +120,9 @@
     const img = document.createElement("img");
     img.src = photo.src;
     img.alt = "";
-    img.loading = "lazy";
+    // Eager: orient is usually already known, so lazy would defer fetch
+    // until near the viewport (after the tall hero).
+    img.loading = options && options.lazy ? "lazy" : "eager";
     img.decoding = "async";
 
     figure.appendChild(img);
@@ -176,12 +187,14 @@
     return rows;
   }
 
-  function renderGallery(container, photos, stripeOffset) {
+  function renderGallery(container, photos, stripeOffset, lazyAfter) {
     container.replaceChildren();
     container.classList.add("mosaic");
     if (!photos.length) return 0;
 
     const offset = stripeOffset || 0;
+    const lazyFrom = typeof lazyAfter === "number" ? lazyAfter : Infinity;
+    let photoIndex = 0;
     const rows = buildMosaic(photos, allowTrioLayout());
     rows.forEach((row, index) => {
       const rowEl = document.createElement("div");
@@ -189,31 +202,14 @@
         (offset + index) % 2 === 0 ? "stripe-a" : "stripe-b";
       rowEl.className = "mosaic-row " + row.type + " " + stripe;
       row.photos.forEach((photo) => {
-        rowEl.appendChild(createGalleryItem(photo));
+        rowEl.appendChild(
+          createGalleryItem(photo, { lazy: photoIndex >= lazyFrom })
+        );
+        photoIndex += 1;
       });
       container.appendChild(rowEl);
     });
     return rows.length;
-  }
-
-  function observeGallery() {
-    const rows = document.querySelectorAll(".mosaic-row");
-    if (!("IntersectionObserver" in window)) {
-      rows.forEach((row) => row.classList.add("is-visible"));
-      return;
-    }
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            entry.target.classList.add("is-visible");
-            observer.unobserve(entry.target);
-          }
-        });
-      },
-      { rootMargin: "0px 0px -8% 0px", threshold: 0.12 }
-    );
-    rows.forEach((row) => observer.observe(row));
   }
 
   /** @type {any[] | null} */
@@ -223,10 +219,16 @@
   function paintGalleries(photos) {
     cachedGalleryPhotos = photos;
     lastTrioPref = allowTrioLayout();
+    prefetchPhotos(photos);
     const midpoint = Math.ceil(photos.length / 2);
-    const rowCountA = renderGallery(galleryA, photos.slice(0, midpoint), 0);
-    renderGallery(galleryB, photos.slice(midpoint), rowCountA);
-    observeGallery();
+    // Eager-load the first gallery; lazy only deep into the second half
+    const rowCountA = renderGallery(
+      galleryA,
+      photos.slice(0, midpoint),
+      0,
+      Infinity
+    );
+    renderGallery(galleryB, photos.slice(midpoint), rowCountA, 4);
   }
 
   function showComingSoon() {
@@ -242,6 +244,8 @@
   let heroEndSize = null;
   let heroScrubRaf = 0;
   let heroSlotSized = false;
+  /** Full-bleed zoom is a one-shot first-load effect. */
+  let heroIntroDone = false;
 
   function clamp01(value) {
     return Math.min(1, Math.max(0, value));
@@ -309,10 +313,11 @@
       maxH = window.innerHeight - 4.5 * 16;
     } else if (isLandscape) {
       maxW = Math.min(availableW, window.innerWidth - 24, 64 * 16);
-      maxH = window.innerHeight - 12.5 * 16;
+      // Leave room for nameplate + oversized first-name on mobile/landscape
+      maxH = window.innerHeight - 16 * 16;
     } else {
       maxW = Math.min(availableW, 26.5 * 16);
-      maxH = window.innerHeight - 12.5 * 16;
+      maxH = window.innerHeight - 14 * 16;
     }
 
     maxW = Math.max(80, maxW);
@@ -361,13 +366,32 @@
     return true;
   }
 
+  function settleHeroIntro() {
+    if (!heroStage || heroIntroDone) return;
+    heroIntroDone = true;
+
+    const stageTopDoc =
+      heroStage.getBoundingClientRect().top + window.scrollY;
+    const prevHeight = heroStage.offsetHeight;
+    const scrolledIntoStage = Math.max(0, window.scrollY - stageTopDoc);
+
+    heroStage.classList.add("is-intro-done");
+    heroStage.style.setProperty("--hero-progress", "1");
+    clearHeroScrubStyles();
+    clearHeroSlotSize();
+
+    const newHeight = heroStage.offsetHeight;
+    const delta = prevHeight - newHeight;
+    if (delta > 0 && scrolledIntoStage > 0) {
+      window.scrollBy(0, -Math.min(delta, scrolledIntoStage));
+    }
+  }
+
   function applyHeroScrub() {
     if (!heroStage) return;
 
     if (prefersReducedMotion()) {
-      heroStage.style.setProperty("--hero-progress", "1");
-      clearHeroScrubStyles();
-      clearHeroSlotSize();
+      settleHeroIntro();
       return;
     }
 
@@ -383,6 +407,15 @@
       return;
     }
 
+    // After the first zoom completes, stay settled forever (no re-zoom on scroll up).
+    if (heroIntroDone) {
+      heroStage.classList.add("is-intro-done");
+      heroStage.style.setProperty("--hero-progress", "1");
+      clearHeroScrubStyles();
+      clearHeroSlotSize();
+      return;
+    }
+
     const range = heroStage.offsetHeight - window.innerHeight;
     const stageTop = heroStage.getBoundingClientRect().top;
     // Finish the zoom/reveal through most of the stage; short hold after.
@@ -392,11 +425,8 @@
       raw >= SCRUB_END ? 1 : clamp01(raw / SCRUB_END);
     heroStage.style.setProperty("--hero-progress", String(progress));
 
-    // Only release fixed once the whole stage has scrolled past — not when
-    // zoom progress hits 1 (that was causing scroll-off / jump-back).
-    if (raw >= 0.999) {
-      clearHeroScrubStyles();
-      clearHeroSlotSize();
+    if (progress >= 0.995) {
+      settleHeroIntro();
       return;
     }
 
@@ -537,6 +567,8 @@
     }
 
     const photos = (data.photos || []).map(normalizePhoto).filter(Boolean);
+    // Kick off downloads immediately (don't wait on orientation probes).
+    prefetchPhotos(photos);
 
     const resolvedPhotos = await Promise.all(photos.map(ensureOrient));
     paintGalleries(resolvedPhotos);

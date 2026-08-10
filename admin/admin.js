@@ -383,7 +383,12 @@
       Authorization: "Bearer " + token,
       "X-GitHub-Api-Version": "2022-11-28",
       "Content-Type": "application/json",
+      "Cache-Control": "no-cache",
     };
+  }
+
+  function delay(ms) {
+    return new Promise((resolve) => window.setTimeout(resolve, ms));
   }
 
   async function githubGet(path, token) {
@@ -395,8 +400,13 @@
       "/contents/" +
       path +
       "?ref=" +
-      encodeURIComponent(BRANCH);
-    const res = await fetch(url, { headers: apiHeaders(token) });
+      encodeURIComponent(BRANCH) +
+      "&_=" +
+      Date.now();
+    const res = await fetch(url, {
+      headers: apiHeaders(token),
+      cache: "no-store",
+    });
     if (res.status === 404) return null;
     if (!res.ok) {
       const body = await res.text();
@@ -424,17 +434,26 @@
       method: "PUT",
       headers: apiHeaders(token),
       body: JSON.stringify(payload),
+      cache: "no-store",
     });
-    // 409 = file changed since we read its sha (common if two saves overlap
-    // or photos take a while). Re-read and retry with the latest sha.
-    if (res.status === 409 && tryNumber < 3) {
+    // 409 = SHA race (photo commits, overlapping saves, or mobile double-tap).
+    // Back off, re-read the latest SHA, and retry.
+    if (res.status === 409 && tryNumber < 6) {
+      await delay(200 * Math.pow(2, tryNumber));
       const fresh = await githubGet(path, token);
+      if (!fresh || !fresh.sha) {
+        throw new Error(
+          "GitHub PUT " +
+            path +
+            " conflicted and the file SHA could not be refreshed. Try Save again."
+        );
+      }
       return githubPut(
         path,
         contentBase64,
         message,
         token,
-        fresh && fresh.sha,
+        fresh.sha,
         tryNumber + 1
       );
     }
@@ -738,22 +757,38 @@
 
   async function saveDataJson(token, message) {
     data.updatedAt = Date.now();
+    // Always re-read SHA immediately before write — photo uploads create
+    // commits on main and can race a SHA captured earlier in the save.
+    await delay(250);
     const existingData = await githubGet(DATA_PATH, token);
+    if (!existingData || !existingData.sha) {
+      throw new Error(
+        "Could not read the current data.json SHA from GitHub. Try Save again."
+      );
+    }
     const json = JSON.stringify(data, null, 2) + "\n";
     await githubPut(
       DATA_PATH,
       textToBase64(json),
       message,
       token,
-      existingData && existingData.sha
+      existingData.sha
     );
   }
 
+  let saveInFlight = false;
+
   async function setLiveFlag(live) {
+    if (saveInFlight) {
+      setStatus("Wait for the current save to finish.", "error");
+      return;
+    }
     const token = await ensureToken();
     if (!token) return;
+    saveInFlight = true;
     goLiveBtn.disabled = true;
     unpublishBtn.disabled = true;
+    saveBtn.disabled = true;
     setStatus(live ? "Going live…" : "Unpublishing…");
     try {
       readFormFieldsIntoData();
@@ -775,8 +810,10 @@
       console.error(err);
       setStatus(err.message || String(err), "error");
     } finally {
+      saveInFlight = false;
       goLiveBtn.disabled = false;
       unpublishBtn.disabled = false;
+      saveBtn.disabled = false;
     }
   }
 
@@ -785,6 +822,7 @@
 
   form.addEventListener("submit", async (event) => {
     event.preventDefault();
+    if (saveInFlight) return;
     setStatus("");
 
     const typedToken = String(tokenInput.value || "").trim();
@@ -802,7 +840,10 @@
       return;
     }
 
+    saveInFlight = true;
     saveBtn.disabled = true;
+    goLiveBtn.disabled = true;
+    unpublishBtn.disabled = true;
     setStatus("Saving…");
 
     try {
@@ -866,7 +907,10 @@
       console.error(err);
       setStatus(err.message || String(err), "error");
     } finally {
+      saveInFlight = false;
       saveBtn.disabled = false;
+      goLiveBtn.disabled = false;
+      unpublishBtn.disabled = false;
     }
   });
 

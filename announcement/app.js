@@ -134,12 +134,13 @@
     return orient === "portrait" || orient === "square";
   }
 
-  function allowTrioLayout() {
+  function allowMultiColumnLayout() {
     return window.matchMedia("(min-width: 640px)").matches;
   }
 
-  /** Pack photos into mosaic bricks: wide / duo / feature / trio */
-  function buildMosaic(photos, allowTrio) {
+  /** Pack photos into mosaic bricks: wide / duo / feature / trio.
+   *  Below 640px: one photo per row (no crop). */
+  function buildMosaic(photos, allowMultiColumn) {
     const rows = [];
     let i = 0;
     let portraitCount = 0;
@@ -156,7 +157,7 @@
       portraitCount += 1;
 
       // Occasional full-width portrait for rhythm
-      if (portraitCount % 6 === 0) {
+      if (!allowMultiColumn || portraitCount % 6 === 0) {
         rows.push({ type: "feature", photos: [current] });
         i += 1;
         continue;
@@ -167,7 +168,7 @@
       const nextPort = next && isPortraitish(next.orient);
       const thirdPort = third && isPortraitish(third.orient);
 
-      if (allowTrio && nextPort && thirdPort) {
+      if (nextPort && thirdPort) {
         rows.push({ type: "trio", photos: [current, next, third] });
         portraitCount += 2;
         i += 3;
@@ -196,7 +197,7 @@
     const offset = stripeOffset || 0;
     const lazyFrom = typeof lazyAfter === "number" ? lazyAfter : Infinity;
     let photoIndex = 0;
-    const rows = buildMosaic(photos, allowTrioLayout());
+    const rows = buildMosaic(photos, allowMultiColumnLayout());
     rows.forEach((row, index) => {
       const rowEl = document.createElement("div");
       const stripe =

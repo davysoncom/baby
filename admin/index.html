@@ -362,6 +362,25 @@
         line-height: 1.35;
       }
 
+      .page-links {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.65rem 1.1rem;
+        margin: 0.15rem 0 0;
+        font-size: 0.9rem;
+        font-weight: 600;
+      }
+
+      .page-links a {
+        color: var(--ink);
+        text-decoration: underline;
+        text-underline-offset: 0.18em;
+      }
+
+      .page-links a:hover {
+        color: var(--accent);
+      }
+
       .preview {
         display: grid;
         gap: 0.5rem;
@@ -474,6 +493,12 @@
               <p class="lede">
                 Edit on the left; the preview uses your current form values,
                 including photos you haven’t saved yet.
+              </p>
+              <p class="page-links">
+                <a href="/" target="_blank" rel="noopener">Open root (/)</a>
+                <a href="/announcement/" target="_blank" rel="noopener"
+                  >Open /announcement/</a
+                >
               </p>
             </div>
 

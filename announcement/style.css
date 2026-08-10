@@ -600,6 +600,26 @@ a {
   vertical-align: middle;
 }
 
+/* Mobile: one photo per row, natural aspect — no crop. */
+@media (max-width: 639px) {
+  .mosaic-row.duo,
+  .mosaic-row.trio {
+    grid-template-columns: 1fr;
+  }
+
+  .mosaic-row.wide .mosaic-item,
+  .mosaic-row.feature .mosaic-item,
+  .mosaic-row.duo .mosaic-item,
+  .mosaic-row.trio .mosaic-item {
+    aspect-ratio: auto;
+  }
+
+  .mosaic-item img {
+    height: auto;
+    object-fit: contain;
+  }
+}
+
 @media (min-width: 640px) {
   .mosaic-row {
     gap: 0.55rem;

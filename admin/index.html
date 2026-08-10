@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover"
+    />
+    <title>Announcement admin</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --sage: #f0e4e8;
+        --blush: #f7dae6;
+        --ink: #3a2c31;
+        --accent: #d48496;
+        --field: #fff;
+        --line: color-mix(in srgb, var(--ink) 14%, transparent);
+        --pad: max(1rem, env(safe-area-inset-left));
+        --pad-r: max(1rem, env(safe-area-inset-right));
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        font-family: "Figtree", system-ui, sans-serif;
+        color: var(--ink);
+        background: linear-gradient(165deg, var(--sage), var(--blush));
+        min-height: 100dvh;
+        padding: calc(1.25rem + env(safe-area-inset-top)) var(--pad-r)
+          calc(2rem + env(safe-area-inset-bottom)) var(--pad);
+      }
+
+      h1 {
+        margin: 0 0 0.25rem;
+        font-size: 1.6rem;
+        font-weight: 600;
+      }
+
+      .lede {
+        margin: 0 0 1.5rem;
+        color: color-mix(in srgb, var(--ink) 70%, transparent);
+        font-size: 0.95rem;
+        line-height: 1.4;
+      }
+
+      form {
+        display: grid;
+        gap: 1rem;
+        max-width: 34rem;
+        margin: 0 auto;
+      }
+
+      label {
+        display: grid;
+        gap: 0.4rem;
+        font-size: 0.92rem;
+        font-weight: 600;
+      }
+
+      input[type="text"],
+      input[type="date"],
+      input[type="time"],
+      input[type="password"],
+      textarea {
+        width: 100%;
+        font: inherit;
+        font-weight: 500;
+        font-size: 1.05rem;
+        padding: 0.85rem 0.9rem;
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        background: var(--field);
+        color: var(--ink);
+        min-height: 3rem;
+      }
+
+      input[type="file"] {
+        font: inherit;
+        width: 100%;
+        padding: 0.65rem 0;
+      }
+
+      .token-box {
+        display: grid;
+        gap: 0.65rem;
+        padding: 1rem;
+        border-radius: 14px;
+        background: color-mix(in srgb, #fff 55%, transparent);
+        border: 1px solid var(--line);
+      }
+
+      .token-status {
+        font-size: 0.92rem;
+        font-weight: 500;
+      }
+
+      .token-status.ok {
+        color: #2f6b4f;
+      }
+
+      .row {
+        display: grid;
+        gap: 1rem;
+      }
+
+      @media (min-width: 520px) {
+        .row.two {
+          grid-template-columns: 1fr 1fr;
+        }
+      }
+
+      .actions {
+        display: grid;
+        gap: 0.75rem;
+        margin-top: 0.5rem;
+      }
+
+      button {
+        font: inherit;
+        font-weight: 600;
+        font-size: 1.05rem;
+        min-height: 3.1rem;
+        border: 0;
+        border-radius: 12px;
+        padding: 0.85rem 1rem;
+        cursor: pointer;
+      }
+
+      button.primary {
+        background: var(--ink);
+        color: #f7faf7;
+      }
+
+      button.secondary {
+        background: transparent;
+        color: var(--ink);
+        border: 1px solid var(--line);
+      }
+
+      button:disabled {
+        opacity: 0.55;
+        cursor: wait;
+      }
+
+      .status {
+        min-height: 1.4rem;
+        font-size: 0.95rem;
+        font-weight: 500;
+        line-height: 1.4;
+      }
+
+      .status.error {
+        color: #9b3b3b;
+      }
+
+      .status.ok {
+        color: #2f6b4f;
+      }
+
+      .hint {
+        font-size: 0.82rem;
+        font-weight: 500;
+        color: color-mix(in srgb, var(--ink) 62%, transparent);
+        line-height: 1.35;
+      }
+
+      .preview {
+        display: grid;
+        gap: 0.5rem;
+      }
+
+      .preview img {
+        width: 100%;
+        max-height: 180px;
+        object-fit: cover;
+        border-radius: 12px;
+      }
+
+      .photo-list {
+        margin: 0;
+        padding-left: 1.1rem;
+        font-size: 0.88rem;
+        font-weight: 500;
+        color: color-mix(in srgb, var(--ink) 75%, transparent);
+      }
+    </style>
+  </head>
+  <body>
+    <form id="admin-form">
+      <div>
+        <h1>Announcement admin</h1>
+        <p class="lede">
+          Update name, details, and photos from your phone. Saves to GitHub Pages.
+        </p>
+      </div>
+
+      <div class="token-box">
+        <div id="token-status" class="token-status">No token saved yet.</div>
+        <label id="token-label">
+          GitHub token
+          <input
+            id="token"
+            type="password"
+            autocomplete="off"
+            spellcheck="false"
+            placeholder="Fine-grained PAT with Contents write"
+          />
+        </label>
+        <p class="hint">
+          Setup once: GitHub → Settings → Developer settings → Fine-grained
+          personal access tokens → Generate. Resource owner
+          <strong>davysoncom</strong>, only repository
+          <strong>baby</strong>, permission <strong>Contents: Read and
+          write</strong>. Paste here once; it stays in this phone’s
+          localStorage until you Clear token. Revoke the token after the
+          announcement is done.
+        </p>
+        <button type="button" class="secondary" id="clear-token">
+          Clear token
+        </button>
+      </div>
+
+      <label>
+        First name
+        <input id="firstName" name="firstName" type="text" autocomplete="off" />
+      </label>
+
+      <label>
+        Middle + last name
+        <input id="middleLast" name="middleLast" type="text" autocomplete="off" />
+      </label>
+
+      <div class="row two">
+        <label>
+          Date
+          <input id="date" name="date" type="text" placeholder="31.07.2026" />
+        </label>
+        <label>
+          Time
+          <input id="time" name="time" type="text" placeholder="11:37 am" />
+        </label>
+      </div>
+
+      <div class="row two">
+        <label>
+          Weight (kg)
+          <input id="weightKg" name="weightKg" type="text" placeholder="3.225kg" />
+        </label>
+        <label>
+          Weight (lbs/oz)
+          <input
+            id="weightLbOz"
+            name="weightLbOz"
+            type="text"
+            placeholder="7lbs 2oz"
+          />
+        </label>
+      </div>
+
+      <label>
+        Hero photo
+        <input id="heroFile" type="file" accept="image/*" />
+        <span class="hint">Replaces the current hero if you pick a new file.</span>
+      </label>
+      <div id="hero-preview" class="preview"></div>
+
+      <label>
+        Gallery photos
+        <input id="photoFiles" type="file" accept="image/*" multiple />
+        <span class="hint"
+          >Adds to the gallery. Existing photos are kept unless you clear them
+          below.</span
+        >
+      </label>
+      <div>
+        <p class="hint" style="margin: 0 0 0.35rem">Current gallery</p>
+        <ul id="photo-list" class="photo-list"></ul>
+        <button type="button" class="secondary" id="clear-photos" style="margin-top: 0.65rem">
+          Clear gallery photos
+        </button>
+      </div>
+
+      <div class="actions">
+        <button type="submit" class="primary" id="save">Save to site</button>
+        <p id="status" class="status" role="status"></p>
+      </div>
+    </form>
+
+    <script src="admin.js"></script>
+  </body>
+</html>

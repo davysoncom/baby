@@ -1,0 +1,10 @@
+{
+  "firstName": "",
+  "middleLast": "",
+  "date": "",
+  "time": "",
+  "weightKg": "",
+  "weightLbOz": "",
+  "hero": { "src": "", "orient": "portrait" },
+  "photos": []
+}

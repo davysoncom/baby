@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover"
+    />
+    <title>A New Arrival</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600&family=Fraunces:opsz,wght@9..144,500;9..144,600&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <div id="coming-soon" class="coming-soon">
+      <p class="coming-soon-label">A new arrival</p>
+      <p class="coming-soon-text">Coming soon</p>
+    </div>
+
+    <main id="announcement" class="announcement" hidden>
+      <section class="hero-stage" aria-label="Announcement">
+        <div class="hero">
+          <div class="hero-media" id="hero-media">
+            <img id="hero-image" alt="" decoding="async" fetchpriority="high" />
+          </div>
+          <div class="hero-band">
+            <h1 id="first-name" class="first-name"></h1>
+            <p id="middle-last" class="middle-last"></p>
+            <div id="details" class="details"></div>
+          </div>
+        </div>
+        <a class="scroll-hint" href="#gallery-a" aria-label="Scroll for more photos">
+          <span class="scroll-hint-chevron" aria-hidden="true"></span>
+        </a>
+      </section>
+
+      <section
+        class="gallery"
+        id="gallery-a"
+        aria-label="Photos"
+      ></section>
+
+      <section class="contact contact-email">
+        <a href="mailto:yds@davyson.com">yds@davyson.com</a>
+      </section>
+
+      <section
+        class="gallery"
+        id="gallery-b"
+        aria-label="More photos"
+      ></section>
+
+      <section class="contact contact-address">
+        <p>
+          Chemin du Reposoir 15,<br />
+          1255 Veyrier Switzerland
+        </p>
+      </section>
+    </main>
+
+    <script src="app.js"></script>
+  </body>
+</html>

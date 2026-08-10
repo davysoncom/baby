@@ -1,8 +1,9 @@
 (function () {
   // Load data/photos from raw GitHub so hospital saves appear in seconds
   // (skip waiting for GitHub Pages rebuild). HTML/CSS/JS still come from Pages.
+  // Use refs/heads/main — the short /main/ raw URL 404s for this repo.
   const RAW_BASE =
-    "https://raw.githubusercontent.com/davysoncom/baby/main/announcement/";
+    "https://raw.githubusercontent.com/davysoncom/baby/refs/heads/main/announcement/";
   const DATA_URL = RAW_BASE + "data.json";
 
   const comingSoon = document.getElementById("coming-soon");
@@ -367,26 +368,21 @@
     return null;
   }
 
+  function loadFrom(url, useRaw) {
+    return fetch(url, { cache: "no-store" }).then((res) => {
+      if (!res.ok) throw new Error("Failed to load data.json");
+      return res.json().then((data) => render(data, { useRaw: useRaw }));
+    });
+  }
+
   const demo = demoMode();
   if (demo) {
     render(demoData(demo === "landscape"), { useRaw: false, demo: true });
   } else {
-    const url = DATA_URL + "?t=" + Date.now();
-    fetch(url, { cache: "no-store" })
-      .then((res) => {
-        if (!res.ok) throw new Error("Failed to load data.json");
-        return res.json();
-      })
-      .then((data) => render(data, { useRaw: true }))
-      .catch(() => {
-        // Fallback to Pages-relative file if raw is unavailable
-        fetch("data.json", { cache: "no-store" })
-          .then((res) => {
-            if (!res.ok) throw new Error("Failed to load data.json");
-            return res.json();
-          })
-          .then((data) => render(data, { useRaw: false }))
-          .catch(() => showComingSoon());
-      });
+    // Prefer raw GitHub for fast updates after admin saves. Falls back to
+    // Pages if raw is unavailable (e.g. private repo before it's public).
+    loadFrom(DATA_URL + "?t=" + Date.now(), true).catch(() =>
+      loadFrom("data.json?t=" + Date.now(), false).catch(() => showComingSoon())
+    );
   }
 })();

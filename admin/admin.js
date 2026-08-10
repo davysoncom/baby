@@ -4,7 +4,7 @@
   const BRANCH = "main";
   const DATA_PATH = "announcement/data.json";
   const DATA_RAW_URL =
-    "https://raw.githubusercontent.com/davysoncom/baby/main/announcement/data.json";
+    "https://raw.githubusercontent.com/davysoncom/baby/refs/heads/main/announcement/data.json";
   const PHOTOS_PREFIX = "announcement/photos/";
   const TOKEN_KEY = "babyAdminToken";
   const MAX_EDGE = 1800;

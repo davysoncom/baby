@@ -68,6 +68,55 @@
     return document.getElementById(id);
   }
 
+  function parseKgInput(text) {
+    const match = String(text || "")
+      .trim()
+      .replace(",", ".")
+      .match(/(\d+(?:\.\d+)?)/);
+    if (!match) return NaN;
+    const kg = parseFloat(match[1]);
+    return Number.isFinite(kg) && kg > 0 ? kg : NaN;
+  }
+
+  function kgToLbOz(kg) {
+    const totalPounds = kg * 2.2046226218;
+    let lbs = Math.floor(totalPounds);
+    let oz = Math.round((totalPounds - lbs) * 16);
+    if (oz === 16) {
+      lbs += 1;
+      oz = 0;
+    }
+    return { lbs: lbs, oz: oz, label: lbs + "lbs " + oz + "oz" };
+  }
+
+  function refreshWeightAdvice() {
+    const adviceText = document.getElementById("weight-advice-text");
+    const useBtn = document.getElementById("weight-advice-use");
+    if (!adviceText || !useBtn) return;
+
+    const kg = parseKgInput(field("weightKg").value);
+    if (!Number.isFinite(kg)) {
+      adviceText.innerHTML = "Enter kg for a lbs/oz suggestion.";
+      useBtn.hidden = true;
+      useBtn.dataset.suggestion = "";
+      return;
+    }
+
+    const converted = kgToLbOz(kg);
+    const current = String(field("weightLbOz").value || "").trim();
+    const matches =
+      current.replace(/\s+/g, " ").toLowerCase() ===
+      converted.label.toLowerCase();
+
+    adviceText.innerHTML =
+      "From kg → about <strong>" +
+      converted.label +
+      "</strong>" +
+      (matches ? " (matches the field)." : ".");
+    useBtn.hidden = matches;
+    useBtn.dataset.suggestion = converted.label;
+  }
+
   function fillForm() {
     field("firstName").value = data.firstName || "";
     field("middleLast").value = data.middleLast || "";
@@ -75,6 +124,7 @@
     field("time").value = data.time || "";
     field("weightKg").value = data.weightKg || "";
     field("weightLbOz").value = data.weightLbOz || "";
+    refreshWeightAdvice();
 
     heroPreview.replaceChildren();
     if (data.hero && data.hero.src) {
@@ -285,6 +335,15 @@
     data.photos = [];
     fillForm();
     setStatus("Gallery cleared in the form. Save to publish.", "ok");
+  });
+
+  field("weightKg").addEventListener("input", refreshWeightAdvice);
+  document.getElementById("weight-advice-use").addEventListener("click", () => {
+    const suggestion =
+      document.getElementById("weight-advice-use").dataset.suggestion || "";
+    if (!suggestion) return;
+    field("weightLbOz").value = suggestion;
+    refreshWeightAdvice();
   });
 
   function isRootLive(html) {

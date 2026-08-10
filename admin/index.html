@@ -192,6 +192,17 @@
         font-weight: 500;
         color: color-mix(in srgb, var(--ink) 75%, transparent);
       }
+
+      .weight-advice {
+        display: grid;
+        gap: 0.55rem;
+        margin-top: -0.35rem;
+      }
+
+      .weight-advice .hint strong {
+        color: var(--ink);
+        font-weight: 600;
+      }
     </style>
   </head>
   <body>
@@ -264,6 +275,14 @@
             placeholder="7lbs 2oz"
           />
         </label>
+      </div>
+      <div class="weight-advice" id="weight-advice">
+        <p class="hint" id="weight-advice-text" style="margin: 0">
+          Enter kg for a lbs/oz suggestion.
+        </p>
+        <button type="button" class="secondary" id="weight-advice-use" hidden>
+          Use suggestion
+        </button>
       </div>
 
       <label>

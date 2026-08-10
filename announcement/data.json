@@ -1,12 +1,12 @@
 {
-  "live": false,
+  "live": true,
   "firstName": "Dorothy",
   "middleLast": "Lisa Davyson",
   "date": "01.08.2026",
   "time": "20:40 PM",
-  "weightKg": "10 kg",
+  "weightKg": "3.6 kg",
   "weightLbOz": "7lbs 4oz",
-  "updatedAt": 1786403660557,
+  "updatedAt": 1786403831640,
   "hero": {
     "src": "photos/hero-20260811-005440-lugg.jpg",
     "orient": "portrait"

@@ -5,8 +5,8 @@
   const DATA_PATH = "announcement/data.json";
   const PHOTOS_PREFIX = "announcement/photos/";
   const TOKEN_KEY = "babyAdminToken";
-  const MAX_EDGE = 1800;
-  const JPEG_QUALITY = 0.82;
+  const MAX_EDGE = 2600;
+  const JPEG_QUALITY = 0.9;
 
   const form = document.getElementById("admin-form");
   const tokenBox = document.getElementById("token-box");

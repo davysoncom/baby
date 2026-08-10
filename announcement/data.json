@@ -1,10 +1,12 @@
 {
+  "live": true,
   "firstName": "Test2",
   "middleLast": "Test Test",
   "date": "01.08.2026",
   "time": "20:40 PM",
   "weightKg": "10 kg",
   "weightLbOz": "7lbs 4oz",
+  "updatedAt": 0,
   "hero": {
     "src": "photos/hero-20260810-225314-jiho.jpg",
     "orient": "landscape"

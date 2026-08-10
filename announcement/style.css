@@ -273,9 +273,11 @@ a {
 }
 
 .hero-band {
+  --band-pad-y: calc(1.15rem + (var(--hero-name-scale) - 1) * 0.9rem);
   width: 100%;
   flex: 0 0 auto;
-  padding: calc(1rem + var(--hero-name-gap, 0px) * 0.35) 1.15rem 1.15rem;
+  /* Even top/bottom around the name; details then extend the band below */
+  padding: var(--band-pad-y) 1.15rem;
   text-align: center;
   background: color-mix(in srgb, var(--band) 82%, #fff);
   position: relative;
@@ -295,8 +297,8 @@ a {
   letter-spacing: -0.03em;
   overflow-wrap: anywhere;
   transform: scale(var(--hero-name-scale));
-  /* Grow downward so the oversized name doesn't collide with the photo */
-  transform-origin: center top;
+  /* Even grow into equal band padding (photo clearance is the slot gap) */
+  transform-origin: center center;
   will-change: transform;
 }
 
@@ -452,6 +454,7 @@ a {
   .hero-stage.is-portrait .hero-band,
   .hero-stage.is-square .hero-band {
     --rail: clamp(16.5rem, 28vw, 22rem);
+    --band-pad-y: calc(1.35rem + (var(--hero-name-scale) - 1) * 0.9rem);
     flex: 0 0 var(--rail);
     width: var(--rail);
     align-self: center;
@@ -460,7 +463,7 @@ a {
     justify-content: center;
     align-items: center;
     text-align: center;
-    padding: 1.35rem 1.25rem 1.5rem;
+    padding: var(--band-pad-y) 1.25rem;
     background: color-mix(in srgb, var(--band) 82%, #fff);
     border: 0;
   }

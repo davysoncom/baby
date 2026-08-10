@@ -5,8 +5,11 @@
   const DATA_PATH = "announcement/data.json";
   const PHOTOS_PREFIX = "announcement/photos/";
   const TOKEN_KEY = "babyAdminToken";
-  const MAX_EDGE = 2600;
-  const JPEG_QUALITY = 0.9;
+  // Keep uploads small enough for iOS Safari → GitHub Contents API
+  // (large PUTs often fail there as a red "Load failed").
+  const MAX_EDGE = 1920;
+  const JPEG_QUALITY = 0.82;
+  const MAX_UPLOAD_BYTES = 2.2 * 1024 * 1024;
 
   const form = document.getElementById("admin-form");
   const tokenBox = document.getElementById("token-box");
@@ -100,6 +103,29 @@
     statusEl.textContent = message || "";
     statusEl.classList.remove("ok", "error");
     if (kind) statusEl.classList.add(kind);
+  }
+
+  function isTransientNetworkError(err) {
+    if (!err) return false;
+    const msg = String(err.message || err);
+    // WebKit/iOS uses TypeError "Load failed" for many fetch failures.
+    return (
+      err.name === "TypeError" ||
+      /load failed/i.test(msg) ||
+      /failed to fetch/i.test(msg) ||
+      /networkerror/i.test(msg) ||
+      /network request failed/i.test(msg)
+    );
+  }
+
+  function formatAdminError(err) {
+    const msg = (err && err.message) || String(err || "Unknown error");
+    if (isTransientNetworkError(err) || /load failed/i.test(msg)) {
+      return (
+        "Upload failed (network). Try Save again — on iPhone, add one photo at a time if it keeps failing."
+      );
+    }
+    return msg;
   }
 
   function field(id) {
@@ -391,6 +417,19 @@
     return new Promise((resolve) => window.setTimeout(resolve, ms));
   }
 
+  async function githubFetch(url, options, attempt) {
+    const tryNumber = attempt || 0;
+    try {
+      return await fetch(url, options);
+    } catch (err) {
+      if (tryNumber < 4 && isTransientNetworkError(err)) {
+        await delay(350 * Math.pow(2, tryNumber));
+        return githubFetch(url, options, tryNumber + 1);
+      }
+      throw new Error(formatAdminError(err));
+    }
+  }
+
   async function githubGet(path, token) {
     const url =
       "https://api.github.com/repos/" +
@@ -403,7 +442,7 @@
       encodeURIComponent(BRANCH) +
       "&_=" +
       Date.now();
-    const res = await fetch(url, {
+    const res = await githubFetch(url, {
       headers: apiHeaders(token),
       cache: "no-store",
     });
@@ -430,12 +469,30 @@
       branch: BRANCH,
     };
     if (sha) payload.sha = sha;
-    const res = await fetch(url, {
-      method: "PUT",
-      headers: apiHeaders(token),
-      body: JSON.stringify(payload),
-      cache: "no-store",
-    });
+    let res;
+    try {
+      res = await githubFetch(url, {
+        method: "PUT",
+        headers: apiHeaders(token),
+        body: JSON.stringify(payload),
+        cache: "no-store",
+      });
+    } catch (err) {
+      // githubFetch already retried; one more full PUT attempt after a pause
+      // helps flaky cellular uploads of photo payloads.
+      if (tryNumber < 2 && isTransientNetworkError(err)) {
+        await delay(800 * (tryNumber + 1));
+        return githubPut(
+          path,
+          contentBase64,
+          message,
+          token,
+          sha,
+          tryNumber + 1
+        );
+      }
+      throw err;
+    }
     // 409 = SHA race (photo commits, overlapping saves, or mobile double-tap).
     // Back off, re-read the latest SHA, and retry.
     if (res.status === 409 && tryNumber < 6) {
@@ -498,33 +555,62 @@
       };
       img.onerror = () => {
         URL.revokeObjectURL(url);
-        reject(new Error("Could not read image"));
+        reject(
+          new Error(
+            "Could not read image. If it’s a HEIC/Live Photo, try exporting as JPEG first."
+          )
+        );
       };
       img.src = url;
     });
   }
 
+  function canvasToJpegBlob(canvas, quality) {
+    return new Promise((resolve) =>
+      canvas.toBlob(resolve, "image/jpeg", quality)
+    );
+  }
+
   async function compressImage(file) {
     const img = await loadImage(file);
     const orient = orientOf(img.naturalWidth, img.naturalHeight);
-    let width = img.naturalWidth;
-    let height = img.naturalHeight;
-    const maxEdge = Math.max(width, height);
-    if (maxEdge > MAX_EDGE) {
-      const scale = MAX_EDGE / maxEdge;
-      width = Math.round(width * scale);
-      height = Math.round(height * scale);
+    let width = img.naturalWidth || 1;
+    let height = img.naturalHeight || 1;
+    let maxEdgeCap = MAX_EDGE;
+    let quality = JPEG_QUALITY;
+
+    const encode = async () => {
+      let w = width;
+      let h = height;
+      const maxEdge = Math.max(w, h);
+      if (maxEdge > maxEdgeCap) {
+        const scale = maxEdgeCap / maxEdge;
+        w = Math.max(1, Math.round(w * scale));
+        h = Math.max(1, Math.round(h * scale));
+      }
+      const canvas = document.createElement("canvas");
+      canvas.width = w;
+      canvas.height = h;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) throw new Error("Image compression failed");
+      ctx.drawImage(img, 0, 0, w, h);
+      return canvasToJpegBlob(canvas, quality);
+    };
+
+    let blob = await encode();
+    // Shrink until the GitHub PUT body is safe for mobile Safari.
+    let guard = 0;
+    while (
+      blob &&
+      blob.size > MAX_UPLOAD_BYTES &&
+      guard < 6 &&
+      (quality > 0.55 || maxEdgeCap > 1100)
+    ) {
+      guard += 1;
+      if (quality > 0.55) quality = Math.max(0.55, quality - 0.1);
+      else maxEdgeCap = Math.round(maxEdgeCap * 0.8);
+      blob = await encode();
     }
-
-    const canvas = document.createElement("canvas");
-    canvas.width = width;
-    canvas.height = height;
-    const ctx = canvas.getContext("2d");
-    ctx.drawImage(img, 0, 0, width, height);
-
-    const blob = await new Promise((resolve) =>
-      canvas.toBlob(resolve, "image/jpeg", JPEG_QUALITY)
-    );
     if (!blob) throw new Error("Image compression failed");
     const buffer = new Uint8Array(await blob.arrayBuffer());
     return {
@@ -808,7 +894,7 @@
       );
     } catch (err) {
       console.error(err);
-      setStatus(err.message || String(err), "error");
+      setStatus(formatAdminError(err), "error");
     } finally {
       saveInFlight = false;
       goLiveBtn.disabled = false;
@@ -905,7 +991,7 @@
       setStatus("Saved — site updates in about a minute.", "ok");
     } catch (err) {
       console.error(err);
-      setStatus(err.message || String(err), "error");
+      setStatus(formatAdminError(err), "error");
     } finally {
       saveInFlight = false;
       saveBtn.disabled = false;

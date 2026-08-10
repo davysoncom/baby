@@ -58,6 +58,7 @@
   let pendingGallery = [];
   let previewReady = false;
   let previewTimer = 0;
+  let dataSha = "";
 
   function getToken() {
     return (
@@ -107,6 +108,9 @@
 
   function isTransientNetworkError(err) {
     if (!err) return false;
+    if (err.cause && err.cause !== err && isTransientNetworkError(err.cause)) {
+      return true;
+    }
     const msg = String(err.message || err);
     // WebKit/iOS uses TypeError "Load failed" for many fetch failures.
     return (
@@ -114,7 +118,8 @@
       /load failed/i.test(msg) ||
       /failed to fetch/i.test(msg) ||
       /networkerror/i.test(msg) ||
-      /network request failed/i.test(msg)
+      /network request failed/i.test(msg) ||
+      /upload failed \(network\)/i.test(msg)
     );
   }
 
@@ -403,14 +408,14 @@
     schedulePreview();
   }
 
-  function apiHeaders(token) {
-    return {
+  function apiHeaders(token, withJsonBody) {
+    const headers = {
       Accept: "application/vnd.github+json",
       Authorization: "Bearer " + token,
       "X-GitHub-Api-Version": "2022-11-28",
-      "Content-Type": "application/json",
-      "Cache-Control": "no-cache",
     };
+    if (withJsonBody) headers["Content-Type"] = "application/json";
+    return headers;
   }
 
   function delay(ms) {
@@ -426,7 +431,9 @@
         await delay(350 * Math.pow(2, tryNumber));
         return githubFetch(url, options, tryNumber + 1);
       }
-      throw new Error(formatAdminError(err));
+      const wrapped = new Error(formatAdminError(err));
+      wrapped.cause = err;
+      throw wrapped;
     }
   }
 
@@ -443,7 +450,7 @@
       "&_=" +
       Date.now();
     const res = await githubFetch(url, {
-      headers: apiHeaders(token),
+      headers: apiHeaders(token, false),
       cache: "no-store",
     });
     if (res.status === 404) return null;
@@ -473,9 +480,8 @@
     try {
       res = await githubFetch(url, {
         method: "PUT",
-        headers: apiHeaders(token),
+        headers: apiHeaders(token, true),
         body: JSON.stringify(payload),
-        cache: "no-store",
       });
     } catch (err) {
       // githubFetch already retried; one more full PUT attempt after a pause
@@ -513,6 +519,29 @@
         fresh.sha,
         tryNumber + 1
       );
+    }
+    if (res.status === 422 && tryNumber < 6) {
+      const body = await res.text();
+      if (/sha/i.test(body)) {
+        await delay(200 * Math.pow(2, tryNumber));
+        const fresh = await githubGet(path, token);
+        if (!fresh || !fresh.sha) {
+          throw new Error(
+            "GitHub PUT " +
+              path +
+              " needs the latest file SHA, but it could not be refreshed. Try Save again."
+          );
+        }
+        return githubPut(
+          path,
+          contentBase64,
+          message,
+          token,
+          fresh.sha,
+          tryNumber + 1
+        );
+      }
+      throw new Error("GitHub PUT " + path + " failed: " + res.status + " " + body);
     }
     if (!res.ok) {
       const body = await res.text();
@@ -664,6 +693,7 @@
 
     const file = await githubGet(DATA_PATH, token);
     if (file && file.content) {
+      dataSha = file.sha || "";
       data = JSON.parse(decodeGithubContent(file));
     }
     fillForm();
@@ -841,25 +871,44 @@
     }
   }
 
-  async function saveDataJson(token, message) {
-    data.updatedAt = Date.now();
-    // Always re-read SHA immediately before write — photo uploads create
-    // commits on main and can race a SHA captured earlier in the save.
-    await delay(250);
+  async function getDataSha(token) {
+    if (dataSha) return dataSha;
     const existingData = await githubGet(DATA_PATH, token);
     if (!existingData || !existingData.sha) {
       throw new Error(
         "Could not read the current data.json SHA from GitHub. Try Save again."
       );
     }
+    dataSha = existingData.sha;
+    return dataSha;
+  }
+
+  async function saveDataJson(token, message) {
+    data.updatedAt = Date.now();
+    const currentSha = await getDataSha(token);
     const json = JSON.stringify(data, null, 2) + "\n";
-    await githubPut(
+    const result = await githubPut(
       DATA_PATH,
       textToBase64(json),
       message,
       token,
-      existingData.sha
+      currentSha
     );
+    dataSha = (result && result.content && result.content.sha) || dataSha;
+  }
+
+  async function saveDataJsonWithRetry(token, message, onRetry) {
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      try {
+        await saveDataJson(token, message);
+        return;
+      } catch (err) {
+        const canRetry = attempt < 2 && isTransientNetworkError(err);
+        if (!canRetry) throw err;
+        if (typeof onRetry === "function") onRetry(attempt + 1);
+        await delay(600 * (attempt + 1));
+      }
+    }
   }
 
   let saveInFlight = false;
@@ -879,11 +928,18 @@
     try {
       readFormFieldsIntoData();
       data.live = Boolean(live);
-      await saveDataJson(
+      await saveDataJsonWithRetry(
         token,
         live
           ? "Go live: set announcement data.live true"
-          : "Unpublish: set announcement data.live false"
+          : "Unpublish: set announcement data.live false",
+        (retryCount) => {
+          setStatus(
+            "Connection dropped while updating live flag — retrying (" +
+              retryCount +
+              "/3)…"
+          );
+        }
       );
       applyLiveStatus(data.live);
       setStatus(
@@ -980,7 +1036,9 @@
       }
 
       setStatus("Updating data.json…");
-      await saveDataJson(token, "Update announcement details");
+      await saveDataJsonWithRetry(token, "Update announcement details", () => {
+        setStatus("Network hiccup while saving data.json — retrying…");
+      });
 
       clearPendingHero();
       clearPendingGallery();

@@ -118,6 +118,13 @@ a {
   --hero-name-gap: calc((1 - var(--hero-name-settle)) * 1.6rem);
 }
 
+/* Mobile + landscape hero: longer settled hold before the gallery */
+@media (max-width: 959px) {
+  .hero-stage.is-landscape:not(.is-intro-done) {
+    height: 280dvh;
+  }
+}
+
 /* After the first-load zoom, collapse to a normal hero (no re-scrub). */
 .hero-stage.is-intro-done {
   height: auto;
@@ -154,11 +161,12 @@ a {
   z-index: 1;
 }
 
-/* Landscape: definite width (avoid max-content → 0 collapse with scrub slot). */
+/* Landscape: stack width follows the photo (JS sets .hero width to image width). */
 .hero-stage.is-landscape .hero {
   width: min(100%, 64rem);
   max-width: min(100%, 64rem);
   align-items: stretch;
+  margin-inline: auto;
 }
 
 .hero-stage.is-landscape .hero-media-slot,
@@ -177,6 +185,7 @@ a {
 
 .hero-stage.is-landscape .hero-band {
   width: 100%;
+  max-width: 100%;
   align-self: stretch;
   box-sizing: border-box;
 }

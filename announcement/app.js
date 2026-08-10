@@ -4,6 +4,7 @@
   const announcement = document.getElementById("announcement");
   const heroStage = document.querySelector(".hero-stage");
   const heroPin = document.querySelector(".hero-pin");
+  const heroEl = document.querySelector(".hero");
   const heroMediaSlot = document.getElementById("hero-media-slot");
   const heroMedia = document.getElementById("hero-media");
   const heroImage = document.getElementById("hero-image");
@@ -280,12 +281,48 @@
     }
   }
 
+  function clearLandscapeStackWidth() {
+    if (heroEl) {
+      heroEl.style.width = "";
+      heroEl.style.maxWidth = "";
+    }
+  }
+
+  /** Keep landscape nameplate the same width as the photo. */
+  function syncLandscapeStackWidth(size) {
+    if (!heroStage || !heroStage.classList.contains("is-landscape") || !size) {
+      clearLandscapeStackWidth();
+      return;
+    }
+    const w = size.w + "px";
+    if (heroEl) {
+      heroEl.style.width = w;
+      heroEl.style.maxWidth = "100%";
+    }
+    if (heroMediaSlot) {
+      heroMediaSlot.style.width = w;
+    }
+  }
+
   function clearHeroSlotSize() {
     heroSlotSized = false;
+    const keepLandscapeWidth =
+      heroIntroDone &&
+      heroStage &&
+      heroStage.classList.contains("is-landscape") &&
+      heroEndSize;
+    const kept = keepLandscapeWidth ? heroEndSize : null;
     heroEndSize = null;
     if (heroMediaSlot) {
       heroMediaSlot.style.width = "";
       heroMediaSlot.style.height = "";
+    }
+    if (kept) {
+      heroEndSize = kept;
+      syncLandscapeStackWidth(kept);
+      if (heroMediaSlot) heroMediaSlot.style.width = kept.w + "px";
+    } else {
+      clearLandscapeStackWidth();
     }
   }
 
@@ -341,12 +378,14 @@
     if (heroSlotSized && heroEndSize) {
       heroMediaSlot.style.width = heroEndSize.w + "px";
       heroMediaSlot.style.height = heroEndSize.h + "px";
+      syncLandscapeStackWidth(heroEndSize);
       return true;
     }
 
     const wasScrubbing = heroMedia.classList.contains("is-scrubbing");
     if (wasScrubbing) {
       // Never clear fixed mid-scroll just to measure — use cache only.
+      if (heroEndSize) syncLandscapeStackWidth(heroEndSize);
       return Boolean(heroEndSize);
     }
 
@@ -362,6 +401,7 @@
     heroEndSize = size;
     heroMediaSlot.style.width = heroEndSize.w + "px";
     heroMediaSlot.style.height = heroEndSize.h + "px";
+    syncLandscapeStackWidth(heroEndSize);
     heroSlotSized = true;
     return true;
   }
@@ -418,8 +458,11 @@
 
     const range = heroStage.offsetHeight - window.innerHeight;
     const stageTop = heroStage.getBoundingClientRect().top;
-    // Finish the zoom/reveal through most of the stage; short hold after.
-    const SCRUB_END = 0.78;
+    // Finish the zoom/reveal, then hold. Mobile landscape gets a longer hold.
+    const mobileLandscape =
+      heroStage.classList.contains("is-landscape") &&
+      window.matchMedia("(max-width: 959px)").matches;
+    const SCRUB_END = mobileLandscape ? 0.58 : 0.78;
     const raw = range <= 0 ? 1 : clamp01(-stageTop / range);
     const progress =
       raw >= SCRUB_END ? 1 : clamp01(raw / SCRUB_END);
@@ -487,6 +530,7 @@
     ) {
       heroMediaSlot.style.width = heroEndSize.w + "px";
       heroMediaSlot.style.height = heroEndSize.h + "px";
+      syncLandscapeStackWidth(heroEndSize);
       scheduleHeroScrub();
       return;
     }

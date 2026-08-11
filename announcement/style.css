@@ -41,6 +41,15 @@ body {
   overflow-x: hidden;
 }
 
+html.is-root-empty {
+  background-color: #fff;
+}
+
+html.is-root-empty body {
+  background-color: #fff;
+  background-image: none;
+}
+
 /* Hold the page until the hero image is ready.
    Use visibility (not [hidden]/display:none) so Safari still loads the hero. */
 html.is-booting,

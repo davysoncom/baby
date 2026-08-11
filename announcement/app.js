@@ -13,6 +13,10 @@
   const detailsEl = document.getElementById("details");
   const galleryA = document.getElementById("gallery-a");
   const galleryB = document.getElementById("gallery-b");
+  const themeColorMeta = document.querySelector('meta[name="theme-color"]');
+  const DEFAULT_THEME_COLOR = themeColorMeta
+    ? themeColorMeta.getAttribute("content") || "#f0e4e8"
+    : "#f0e4e8";
 
   /** @type {string|number} */
   let assetVersion = "";
@@ -63,7 +67,18 @@
     if (on) window.scrollTo(0, 0);
   }
 
+  function setRootEmptyState(on) {
+    const isRootEmpty = Boolean(on);
+    document.documentElement.classList.toggle("is-root-empty", isRootEmpty);
+    if (!themeColorMeta) return;
+    themeColorMeta.setAttribute(
+      "content",
+      isRootEmpty ? "#ffffff" : DEFAULT_THEME_COLOR
+    );
+  }
+
   function showBlank() {
+    setRootEmptyState(requiresPublicLive());
     if (comingSoon) comingSoon.hidden = true;
     if (announcement) announcement.hidden = true;
     document.title = "A New Arrival";
@@ -264,6 +279,7 @@
 
   function showComingSoon() {
     if (announcementRevealed) return;
+    setRootEmptyState(false);
     comingSoon.hidden = false;
     announcement.hidden = true;
     document.title = "A New Arrival";
@@ -602,6 +618,7 @@
     }
 
     announcementRevealed = true;
+    setRootEmptyState(false);
     comingSoon.hidden = true;
     // Keep announcement in the layout (not [hidden]/display:none) so iOS Safari
     // can load the hero; is-booting only hides it visually + locks scroll.

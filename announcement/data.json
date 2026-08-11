@@ -6,10 +6,27 @@
   "time": "20:40 PM",
   "weightKg": "3.6 kg",
   "weightLbOz": "7lbs 4oz",
-  "updatedAt": 1786406031849,
+  "updatedAt": 1786424033407,
   "hero": {
-    "src": "",
+    "src": "photos/hero-20260811-065341-3ola.jpg",
     "orient": "portrait"
   },
-  "photos": []
+  "photos": [
+    {
+      "src": "photos/photo-20260811-065344-wmvy.jpg",
+      "orient": "portrait"
+    },
+    {
+      "src": "photos/photo-20260811-065346-q2yd.jpg",
+      "orient": "portrait"
+    },
+    {
+      "src": "photos/photo-20260811-065349-nhib.jpg",
+      "orient": "portrait"
+    },
+    {
+      "src": "photos/photo-20260811-065351-s3yp.jpg",
+      "orient": "portrait"
+    }
+  ]
 }

@@ -8,7 +8,12 @@
   // Keep uploads small enough for iOS Safari → GitHub Contents API
   // (large PUTs often fail there as a red "Load failed").
   const MAX_EDGE = 1920;
+  const WEBP_QUALITY = 0.8;
   const JPEG_QUALITY = 0.82;
+  const ENCODE_FORMATS = [
+    { ext: "webp", mime: "image/webp", quality: WEBP_QUALITY },
+    { ext: "jpg", mime: "image/jpeg", quality: JPEG_QUALITY },
+  ];
   const MAX_UPLOAD_BYTES = 2.2 * 1024 * 1024;
   const UPLOAD_SIZE_STEPS = [
     MAX_UPLOAD_BYTES,
@@ -599,10 +604,8 @@
     });
   }
 
-  function canvasToJpegBlob(canvas, quality) {
-    return new Promise((resolve) =>
-      canvas.toBlob(resolve, "image/jpeg", quality)
-    );
+  function canvasToBlob(canvas, mime, quality) {
+    return new Promise((resolve) => canvas.toBlob(resolve, mime, quality));
   }
 
   async function compressImage(file, options) {
@@ -612,51 +615,65 @@
     const minEdgeCap = (options && options.minEdgeCap) || 900;
     const img = await loadImage(file);
     const orient = orientOf(img.naturalWidth, img.naturalHeight);
-    let width = img.naturalWidth || 1;
-    let height = img.naturalHeight || 1;
-    let maxEdgeCap = MAX_EDGE;
-    let quality = JPEG_QUALITY;
+    const width = img.naturalWidth || 1;
+    const height = img.naturalHeight || 1;
+    const formats = (options && options.formats) || ENCODE_FORMATS;
 
-    const encode = async () => {
-      let w = width;
-      let h = height;
-      const maxEdge = Math.max(w, h);
-      if (maxEdge > maxEdgeCap) {
-        const scale = maxEdgeCap / maxEdge;
-        w = Math.max(1, Math.round(w * scale));
-        h = Math.max(1, Math.round(h * scale));
+    const tryEncode = async (format) => {
+      let maxEdgeCap = MAX_EDGE;
+      let quality =
+        typeof format.quality === "number" ? format.quality : JPEG_QUALITY;
+
+      const encode = async () => {
+        let w = width;
+        let h = height;
+        const maxEdge = Math.max(w, h);
+        if (maxEdge > maxEdgeCap) {
+          const scale = maxEdgeCap / maxEdge;
+          w = Math.max(1, Math.round(w * scale));
+          h = Math.max(1, Math.round(h * scale));
+        }
+        const canvas = document.createElement("canvas");
+        canvas.width = w;
+        canvas.height = h;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) throw new Error("Image compression failed");
+        ctx.drawImage(img, 0, 0, w, h);
+        return canvasToBlob(canvas, format.mime, quality);
+      };
+
+      let blob = await encode();
+      if (!blob) return null;
+      // Shrink until the GitHub PUT body is safe for mobile Safari.
+      let guard = 0;
+      while (
+        blob.size > maxUploadBytes &&
+        guard < 8 &&
+        (quality > minQuality || maxEdgeCap > minEdgeCap)
+      ) {
+        guard += 1;
+        if (quality > minQuality) quality = Math.max(minQuality, quality - 0.1);
+        else maxEdgeCap = Math.round(maxEdgeCap * 0.8);
+        blob = await encode();
+        if (!blob) return null;
       }
-      const canvas = document.createElement("canvas");
-      canvas.width = w;
-      canvas.height = h;
-      const ctx = canvas.getContext("2d");
-      if (!ctx) throw new Error("Image compression failed");
-      ctx.drawImage(img, 0, 0, w, h);
-      return canvasToJpegBlob(canvas, quality);
+      return blob;
     };
 
-    let blob = await encode();
-    // Shrink until the GitHub PUT body is safe for mobile Safari.
-    let guard = 0;
-    while (
-      blob &&
-      blob.size > maxUploadBytes &&
-      guard < 8 &&
-      (quality > minQuality || maxEdgeCap > minEdgeCap)
-    ) {
-      guard += 1;
-      if (quality > minQuality) quality = Math.max(minQuality, quality - 0.1);
-      else maxEdgeCap = Math.round(maxEdgeCap * 0.8);
-      blob = await encode();
+    for (let i = 0; i < formats.length; i += 1) {
+      const format = formats[i];
+      const blob = await tryEncode(format);
+      if (!blob) continue;
+      const buffer = new Uint8Array(await blob.arrayBuffer());
+      return {
+        base64: bytesToBase64(buffer),
+        orient: orient,
+        ext: format.ext,
+        bytes: blob.size,
+      };
     }
-    if (!blob) throw new Error("Image compression failed");
-    const buffer = new Uint8Array(await blob.arrayBuffer());
-    return {
-      base64: bytesToBase64(buffer),
-      orient: orient,
-      ext: "jpg",
-      bytes: blob.size,
-    };
+
+    throw new Error("Image compression failed");
   }
 
   async function uploadImageWithFallback(
@@ -667,8 +684,8 @@
     primaryStatus,
     retryLabel
   ) {
-    const fileName = stampName(filePrefix, "jpg");
-    const path = PHOTOS_PREFIX + fileName;
+    let fileName = "";
+    let path = "";
     const retryBaseLabel = retryLabel || "photo";
     let lastError = null;
 
@@ -689,6 +706,10 @@
       const compressed = await compressImage(file, {
         maxUploadBytes: targetBytes,
       });
+      if (!fileName) {
+        fileName = stampName(filePrefix, compressed.ext);
+        path = PHOTOS_PREFIX + fileName;
+      }
       try {
         const existing = await githubGet(path, token);
         await githubPut(

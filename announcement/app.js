@@ -145,15 +145,6 @@
     });
   }
 
-  function prefetchPhotos(photos) {
-    (photos || []).forEach((photo) => {
-      if (!photo || !photo.src) return;
-      const img = new Image();
-      img.decoding = "async";
-      img.src = photo.src;
-    });
-  }
-
   function createGalleryItem(photo, options) {
     const figure = document.createElement("figure");
     figure.className =
@@ -162,9 +153,9 @@
     const img = document.createElement("img");
     img.src = photo.src;
     img.alt = "";
-    // Eager: orient is usually already known, so lazy would defer fetch
-    // until near the viewport (after the tall hero).
-    img.loading = options && options.lazy ? "lazy" : "eager";
+    const eager = Boolean(options && options.eager);
+    img.loading = eager ? "eager" : "lazy";
+    img.fetchPriority = eager ? "high" : "low";
     img.decoding = "async";
 
     figure.appendChild(img);
@@ -230,13 +221,14 @@
     return rows;
   }
 
-  function renderGallery(container, photos, stripeOffset, lazyAfter) {
+  function renderGallery(container, photos, stripeOffset, eagerCount) {
     container.replaceChildren();
     container.classList.add("mosaic");
     if (!photos.length) return 0;
 
     const offset = stripeOffset || 0;
-    const lazyFrom = typeof lazyAfter === "number" ? lazyAfter : Infinity;
+    const eagerLimit =
+      typeof eagerCount === "number" ? Math.max(0, eagerCount) : 0;
     let photoIndex = 0;
     const rows = buildMosaic(photos, allowMultiColumnLayout());
     rows.forEach((row, index) => {
@@ -246,7 +238,7 @@
       rowEl.className = "mosaic-row " + row.type + " " + stripe;
       row.photos.forEach((photo) => {
         rowEl.appendChild(
-          createGalleryItem(photo, { lazy: photoIndex >= lazyFrom })
+          createGalleryItem(photo, { eager: photoIndex < eagerLimit })
         );
         photoIndex += 1;
       });
@@ -262,16 +254,15 @@
   function paintGalleries(photos) {
     cachedGalleryPhotos = photos;
     lastMultiColumnPref = allowMultiColumnLayout();
-    prefetchPhotos(photos);
     const midpoint = Math.ceil(photos.length / 2);
-    // Eager-load the first gallery; lazy only deep into the second half
+    // Keep eager loads minimal so mobile can show the hero quickly.
     const rowCountA = renderGallery(
       galleryA,
       photos.slice(0, midpoint),
       0,
-      Infinity
+      2
     );
-    renderGallery(galleryB, photos.slice(midpoint), rowCountA, 4);
+    renderGallery(galleryB, photos.slice(midpoint), rowCountA, 0);
   }
 
   /** Once a real announcement has been shown, never flash Coming soon again. */
@@ -637,8 +628,6 @@
     if (heroStage) heroStage.classList.remove(...orientClasses);
 
     const photos = (data.photos || []).map(normalizePhoto).filter(Boolean);
-    // Prefetch gallery while waiting on the hero.
-    prefetchPhotos(photos);
     const photosPromise = Promise.all(photos.map(ensureOrient));
 
     if (hero && hero.src) {

@@ -8,6 +8,66 @@
     />
     <meta name="theme-color" content="#f0e4e8" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <script>
+      // Start the data fetch and hero image download before app.js parses,
+      // so the hero paints as early as possible on slow connections.
+      (function () {
+        if (/[?&](preview|demo)(=|&|$)/.test(window.location.search)) return;
+        function assetUrl(src, v) {
+          if (!src) return "";
+          if (/^https?:\/\//i.test(src) || src.indexOf("data:") === 0) {
+            return src;
+          }
+          if (src.indexOf("../") === 0 || src.indexOf("/") === 0) return src;
+          var path = src.replace(/^\.\//, "");
+          return v ? path + "?v=" + encodeURIComponent(v) : path;
+        }
+        window.__announcementData = fetch("data.json?t=" + Date.now(), {
+          cache: "no-store",
+        })
+          .then(function (res) {
+            if (!res.ok) throw new Error("Failed to load data.json");
+            return res.json();
+          })
+          .then(function (data) {
+            try {
+              var hero = data && data.hero;
+              if (hero && hero.src) {
+                var v = (data && (data.updatedAt || data.v)) || "";
+                var link = document.createElement("link");
+                link.rel = "preload";
+                link.as = "image";
+                link.setAttribute("fetchpriority", "high");
+                if (hero.full && hero.width && hero.fullWidth) {
+                  link.setAttribute(
+                    "imagesrcset",
+                    assetUrl(hero.src, v) +
+                      " " +
+                      hero.width +
+                      "w, " +
+                      assetUrl(hero.full, v) +
+                      " " +
+                      hero.fullWidth +
+                      "w"
+                  );
+                  link.setAttribute(
+                    "imagesizes",
+                    hero.orient === "landscape"
+                      ? "(min-width: 960px) 64rem, 100vw"
+                      : "(min-width: 960px) 46rem, 100vw"
+                  );
+                } else {
+                  link.href = assetUrl(hero.src, v);
+                }
+                document.head.appendChild(link);
+              }
+            } catch (_) {
+              /* preload is best-effort */
+            }
+            return data;
+          });
+      })();
+    </script>
     <title>A New Arrival</title>
     <meta property="og:title" content="A New Arrival" />
     <meta

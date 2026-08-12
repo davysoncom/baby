@@ -6,38 +6,38 @@
   "time": "23:14 PM",
   "weightKg": "3.02 kg",
   "weightLbOz": "6lbs 11oz",
-  "updatedAt": 1786513734412,
+  "updatedAt": 1786514854578,
   "hero": {
-    "src": "photos/hero-20260812-074746-48e8.webp",
+    "src": "photos/hero-20260812-080732-cx4s.jpg",
     "orient": "portrait"
   },
   "photos": [
     {
-      "src": "photos/photo-20260812-074749-hqdp.webp",
+      "src": "photos/photo-20260812-074749-hqdp.jpg",
       "orient": "portrait"
     },
     {
-      "src": "photos/photo-20260812-074753-vree.webp",
+      "src": "photos/photo-20260812-074753-vree.jpg",
       "orient": "landscape"
     },
     {
-      "src": "photos/photo-20260812-074755-5r7h.webp",
+      "src": "photos/photo-20260812-074755-5r7h.jpg",
       "orient": "landscape"
     },
     {
-      "src": "photos/photo-20260812-074758-psyc.webp",
+      "src": "photos/photo-20260812-074758-psyc.jpg",
       "orient": "landscape"
     },
     {
-      "src": "photos/photo-20260812-074800-xebb.webp",
+      "src": "photos/photo-20260812-074800-xebb.jpg",
       "orient": "landscape"
     },
     {
-      "src": "photos/photo-20260812-074803-465b.webp",
+      "src": "photos/photo-20260812-074803-465b.jpg",
       "orient": "landscape"
     },
     {
-      "src": "photos/photo-20260812-074805-b3td.webp",
+      "src": "photos/photo-20260812-074805-b3td.jpg",
       "orient": "landscape"
     }
   ]

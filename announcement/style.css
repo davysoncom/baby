@@ -139,8 +139,11 @@ a {
   );
   --hero-hint: clamp(0, calc((0.55 - var(--hero-progress)) / 0.55), 1);
   position: relative;
-  /* Tall stage: zoom/reveal, then a short hold before the gallery. */
+  /* Tall stage: zoom/reveal, then a short hold before the gallery.
+     svh (not dvh) so the mobile URL bar collapsing mid-scroll doesn't
+     re-layout the stage and make the zoom jump. */
   height: 220dvh;
+  height: 220svh;
   box-sizing: border-box;
 }
 
@@ -154,6 +157,7 @@ a {
 @media (max-width: 959px) {
   .hero-stage.is-landscape {
     height: 280dvh;
+    height: 280svh;
   }
 }
 
@@ -166,7 +170,10 @@ a {
 .hero-pin {
   position: sticky;
   top: 0;
+  /* svh keeps the pin (and the hero centered in it) the same size while
+     the mobile URL bar shows/hides during scrolling. */
   height: 100dvh;
+  height: 100svh;
   width: 100%;
   display: flex;
   flex-direction: column;
@@ -186,6 +193,7 @@ a {
   margin-inline: auto;
   flex: 0 1 auto;
   max-height: calc(100dvh - 3.5rem);
+  max-height: calc(100svh - 3.5rem);
   container-type: inline-size;
   container-name: hero;
   position: relative;
@@ -211,6 +219,7 @@ a {
   height: auto;
   max-width: 100%;
   max-height: calc(100dvh - var(--hero-chrome));
+  max-height: calc(100svh - var(--hero-chrome));
   object-fit: contain;
 }
 
@@ -280,12 +289,10 @@ a {
   height: 100%;
   max-width: none;
   max-height: none;
+  /* cover for the whole scrub — the end frame matches the image aspect,
+     so the crop eases to zero (a mid-scrub switch to contain snaps). */
   object-fit: cover;
   object-position: center;
-}
-
-.hero-media.is-scrubbing.is-settling img {
-  object-fit: contain;
 }
 
 .hero-media img {
@@ -294,6 +301,7 @@ a {
   height: auto;
   max-width: 100%;
   max-height: calc(100dvh - var(--hero-chrome));
+  max-height: calc(100svh - var(--hero-chrome));
   object-fit: contain;
   object-position: center;
   opacity: 0;
@@ -469,6 +477,7 @@ a {
     gap: clamp(1.25rem, 2.5vw, 2.5rem);
     width: min(100%, 72rem);
     max-height: calc(100dvh - 4rem);
+    max-height: calc(100svh - 4rem);
   }
 
   .hero-stage.is-portrait .hero-media-slot,
@@ -480,12 +489,14 @@ a {
     min-width: 0;
     height: 100%;
     max-height: calc(100dvh - 4rem);
+    max-height: calc(100svh - 4rem);
   }
 
   .hero-stage.is-portrait .hero-media img,
   .hero-stage.is-square .hero-media img {
     max-width: min(100%, 46rem);
     max-height: calc(100dvh - 4.5rem);
+    max-height: calc(100svh - 4.5rem);
     width: auto;
     height: auto;
   }

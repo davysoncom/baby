@@ -14,6 +14,15 @@
     { ext: "webp", mime: "image/webp", quality: WEBP_QUALITY },
     { ext: "jpg", mime: "image/jpeg", quality: JPEG_QUALITY },
   ];
+  // The hero is the first paint, so its phone variant is sized for retina
+  // phones (~1600px max edge) and compressed harder — high DPI hides the
+  // extra compression. Big screens get a larger, higher-quality variant.
+  const HERO_SMALL_EDGE = 1600;
+  const HERO_SMALL_QUALITY = 0.68;
+  const HERO_FULL_EDGE = 1920;
+  const HERO_FULL_QUALITY = 0.8;
+  const GALLERY_EDGE = 1600;
+  const GALLERY_QUALITY = 0.75;
   const MAX_UPLOAD_BYTES = 2.2 * 1024 * 1024;
   const UPLOAD_SIZE_STEPS = [
     MAX_UPLOAD_BYTES,
@@ -613,6 +622,9 @@
       (options && options.maxUploadBytes) || MAX_UPLOAD_BYTES;
     const minQuality = (options && options.minQuality) || 0.5;
     const minEdgeCap = (options && options.minEdgeCap) || 900;
+    const startEdgeCap = (options && options.maxEdge) || MAX_EDGE;
+    const qualityOverride =
+      options && typeof options.quality === "number" ? options.quality : null;
     const img = await loadImage(file);
     const orient = orientOf(img.naturalWidth, img.naturalHeight);
     const width = img.naturalWidth || 1;
@@ -620,9 +632,15 @@
     const formats = (options && options.formats) || ENCODE_FORMATS;
 
     const tryEncode = async (format) => {
-      let maxEdgeCap = MAX_EDGE;
+      let maxEdgeCap = startEdgeCap;
       let quality =
-        typeof format.quality === "number" ? format.quality : JPEG_QUALITY;
+        qualityOverride !== null
+          ? qualityOverride
+          : typeof format.quality === "number"
+            ? format.quality
+            : JPEG_QUALITY;
+      let encodedW = width;
+      let encodedH = height;
 
       const encode = async () => {
         let w = width;
@@ -633,6 +651,8 @@
           w = Math.max(1, Math.round(w * scale));
           h = Math.max(1, Math.round(h * scale));
         }
+        encodedW = w;
+        encodedH = h;
         const canvas = document.createElement("canvas");
         canvas.width = w;
         canvas.height = h;
@@ -657,36 +677,32 @@
         blob = await encode();
         if (!blob) return null;
       }
-      return blob;
+      return { blob: blob, width: encodedW, height: encodedH };
     };
 
     for (let i = 0; i < formats.length; i += 1) {
       const format = formats[i];
-      const blob = await tryEncode(format);
-      if (!blob) continue;
-      const buffer = new Uint8Array(await blob.arrayBuffer());
+      const result = await tryEncode(format);
+      if (!result) continue;
+      const buffer = new Uint8Array(await result.blob.arrayBuffer());
       return {
         base64: bytesToBase64(buffer),
         orient: orient,
         ext: format.ext,
-        bytes: blob.size,
+        bytes: result.blob.size,
+        width: result.width,
+        height: result.height,
       };
     }
 
     throw new Error("Image compression failed");
   }
 
-  async function uploadImageWithFallback(
-    file,
-    filePrefix,
-    message,
-    token,
-    primaryStatus,
-    retryLabel
-  ) {
+  /** opts: fileBase, message, token, primaryStatus, retryLabel, maxEdge, quality */
+  async function uploadImageWithFallback(file, opts) {
     let fileName = "";
     let path = "";
-    const retryBaseLabel = retryLabel || "photo";
+    const retryBaseLabel = opts.retryLabel || "photo";
     let lastError = null;
 
     for (let i = 0; i < UPLOAD_SIZE_STEPS.length; i += 1) {
@@ -694,7 +710,7 @@
       const attemptNumber = i + 1;
       setStatus(
         i === 0
-          ? primaryStatus + "…"
+          ? opts.primaryStatus + "…"
           : "Retrying " +
               retryBaseLabel +
               " with smaller upload (" +
@@ -705,23 +721,27 @@
       );
       const compressed = await compressImage(file, {
         maxUploadBytes: targetBytes,
+        maxEdge: opts.maxEdge,
+        quality: opts.quality,
       });
       if (!fileName) {
-        fileName = stampName(filePrefix, compressed.ext);
+        fileName = opts.fileBase + "." + compressed.ext;
         path = PHOTOS_PREFIX + fileName;
       }
       try {
-        const existing = await githubGet(path, token);
+        const existing = await githubGet(path, opts.token);
         await githubPut(
           path,
           compressed.base64,
-          message,
-          token,
+          opts.message,
+          opts.token,
           existing && existing.sha
         );
         return {
           src: "photos/" + fileName,
           orient: compressed.orient,
+          width: compressed.width,
+          height: compressed.height,
         };
       } catch (err) {
         lastError = err;
@@ -735,10 +755,11 @@
     throw lastError || new Error("Image upload failed");
   }
 
-  function stampName(prefix, ext) {
+  function makeStamp(prefix) {
     const now = new Date();
     const pad = (n) => String(n).padStart(2, "0");
-    const stamp =
+    return (
+      prefix +
       now.getFullYear() +
       pad(now.getMonth() + 1) +
       pad(now.getDate()) +
@@ -747,8 +768,8 @@
       pad(now.getMinutes()) +
       pad(now.getSeconds()) +
       "-" +
-      Math.random().toString(36).slice(2, 6);
-    return prefix + stamp + "." + ext;
+      Math.random().toString(36).slice(2, 6)
+    );
   }
 
   function decodeGithubContent(file) {
@@ -1081,30 +1102,63 @@
 
       const heroFile = field("heroFile").files[0];
       if (heroFile) {
-        const uploadedHero = await uploadImageWithFallback(
-          heroFile,
-          "hero-",
-          "Update announcement hero photo",
-          token,
-          "Uploading hero photo",
-          "hero photo"
-        );
+        const heroBase = makeStamp("hero-");
+        const uploadedHero = await uploadImageWithFallback(heroFile, {
+          fileBase: heroBase + "-m",
+          maxEdge: HERO_SMALL_EDGE,
+          quality: HERO_SMALL_QUALITY,
+          message: "Update announcement hero photo",
+          token: token,
+          primaryStatus: "Uploading hero photo (phone size)",
+          retryLabel: "hero photo",
+        });
         data.hero = {
           src: uploadedHero.src,
           orient: uploadedHero.orient,
+          width: uploadedHero.width,
+          height: uploadedHero.height,
         };
+
+        // A separate larger variant only helps when the source out-sizes
+        // the phone variant.
+        const probe = await loadImage(heroFile);
+        const sourceEdge = Math.max(
+          probe.naturalWidth || 0,
+          probe.naturalHeight || 0
+        );
+        if (sourceEdge > HERO_SMALL_EDGE * 1.05) {
+          try {
+            const uploadedFull = await uploadImageWithFallback(heroFile, {
+              fileBase: heroBase + "-f",
+              maxEdge: HERO_FULL_EDGE,
+              quality: HERO_FULL_QUALITY,
+              message: "Update announcement hero photo (large screens)",
+              token: token,
+              primaryStatus: "Uploading hero photo (large size)",
+              retryLabel: "hero photo (large)",
+            });
+            data.hero.full = uploadedFull.src;
+            data.hero.fullWidth = uploadedFull.width;
+          } catch (err) {
+            // Phone-size hero is already saved; the large variant is
+            // optional, so a flaky upload shouldn't fail the whole save.
+            console.error(err);
+          }
+        }
       }
 
       const galleryFiles = Array.from(field("photoFiles").files || []);
       for (let i = 0; i < galleryFiles.length; i++) {
-        const uploadedPhoto = await uploadImageWithFallback(
-          galleryFiles[i],
-          "photo-",
-          "Add announcement gallery photo",
-          token,
-          "Uploading gallery photo " + (i + 1) + " of " + galleryFiles.length,
-          "gallery photo " + (i + 1)
-        );
+        const uploadedPhoto = await uploadImageWithFallback(galleryFiles[i], {
+          fileBase: makeStamp("photo-"),
+          maxEdge: GALLERY_EDGE,
+          quality: GALLERY_QUALITY,
+          message: "Add announcement gallery photo",
+          token: token,
+          primaryStatus:
+            "Uploading gallery photo " + (i + 1) + " of " + galleryFiles.length,
+          retryLabel: "gallery photo " + (i + 1),
+        });
         data.photos.push({
           src: uploadedPhoto.src,
           orient: uploadedPhoto.orient,

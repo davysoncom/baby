@@ -8,8 +8,12 @@
   "weightLbOz": "6lbs 11oz",
   "updatedAt": 1786513734412,
   "hero": {
-    "src": "photos/hero-20260812-074746-48e8.webp",
-    "orient": "portrait"
+    "src": "photos/hero-20260812-074746-48e8-m.webp",
+    "orient": "portrait",
+    "width": 1200,
+    "height": 1600,
+    "full": "photos/hero-20260812-074746-48e8.webp",
+    "fullWidth": 1440
   },
   "photos": [
     {

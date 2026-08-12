@@ -48,6 +48,10 @@
     return {
       src: resolveAssetUrl(entry.src),
       orient: entry.orient || "",
+      width: entry.width || 0,
+      height: entry.height || 0,
+      full: entry.full ? resolveAssetUrl(entry.full) : "",
+      fullWidth: entry.fullWidth || 0,
     };
   }
 
@@ -637,6 +641,25 @@
       if (heroStage) heroStage.classList.add("is-" + orient);
       heroImage.classList.remove("is-loaded");
       heroImage.alt = data.firstName.trim();
+      // Phones pick the smaller hero file; big screens get the larger one.
+      if (resolved.full && resolved.width && resolved.fullWidth) {
+        heroImage.srcset =
+          resolved.src +
+          " " +
+          resolved.width +
+          "w, " +
+          resolved.full +
+          " " +
+          resolved.fullWidth +
+          "w";
+        heroImage.sizes =
+          orient === "landscape"
+            ? "(min-width: 960px) 64rem, 100vw"
+            : "(min-width: 960px) 46rem, 100vw";
+      } else {
+        heroImage.removeAttribute("srcset");
+        heroImage.removeAttribute("sizes");
+      }
       heroImage.src = resolved.src;
       await waitForHeroImage();
       heroImage.classList.add("is-loaded");
@@ -772,11 +795,15 @@
   } else if (demo) {
     render(demoData(demo === "landscape"), { demo: true });
   } else {
-    fetch("data.json?t=" + Date.now(), { cache: "no-store" })
-      .then((res) => {
+    // The head bootstrap starts this fetch (and the hero preload) before
+    // this script parses; fall back to fetching here if it's absent.
+    const dataPromise =
+      window.__announcementData ||
+      fetch("data.json?t=" + Date.now(), { cache: "no-store" }).then((res) => {
         if (!res.ok) throw new Error("Failed to load data.json");
         return res.json();
-      })
+      });
+    dataPromise
       .then((data) => render(data))
       .catch(() => {
         // Stay blank — never flash Coming soon on a load/network hiccup.

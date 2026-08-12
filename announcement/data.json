@@ -1,12 +1,12 @@
 {
-  "live": false,
+  "live": true,
   "firstName": "Emma",
   "middleLast": "Aurelia Davyson",
   "date": "11.08.2026",
   "time": "11:14 PM",
   "weightKg": "3.02 kg",
   "weightLbOz": "6lbs 11oz",
-  "updatedAt": 1786521470401,
+  "updatedAt": 1786547485845,
   "hero": {
     "src": "photos/hero-20260812-080732-cx4s-m.webp",
     "orient": "portrait",

@@ -290,6 +290,10 @@
   let heroSlotSized = false;
   /** Full-bleed zoom is a one-shot first-load effect. */
   let heroIntroDone = false;
+  /** Intro progress only moves forward — scrolling back up never re-zooms. */
+  let heroMaxProgress = 0;
+  /** Scroll range frozen at intro start (mobile URL bars resize mid-scroll). */
+  let heroIntroRange = 0;
 
   function clamp01(value) {
     return Math.min(1, Math.max(0, value));
@@ -299,13 +303,22 @@
     return a + (b - a) * t;
   }
 
+  /** Viewport height that ignores mobile URL bar collapse (matches svh). */
+  function stableViewportHeight() {
+    const doc = document.documentElement;
+    const clientH = doc ? doc.clientHeight : 0;
+    return clientH > 0
+      ? Math.min(window.innerHeight, clientH)
+      : window.innerHeight;
+  }
+
   function prefersReducedMotion() {
     return reduceMotionQuery.matches;
   }
 
   function clearHeroScrubStyles() {
     if (!heroMedia) return;
-    heroMedia.classList.remove("is-scrubbing", "is-settling");
+    heroMedia.classList.remove("is-scrubbing");
     heroMedia.style.position = "";
     heroMedia.style.left = "";
     heroMedia.style.top = "";
@@ -378,6 +391,7 @@
 
     const pinRect = heroPin.getBoundingClientRect();
     const availableW = Math.max(80, pinRect.width);
+    const viewportH = stableViewportHeight();
     const isLandscape = heroStage.classList.contains("is-landscape");
     const isWide = window.matchMedia("(min-width: 960px)").matches;
     const isDesktopRail =
@@ -390,14 +404,14 @@
     if (isDesktopRail) {
       const rail = Math.min(352, Math.max(264, window.innerWidth * 0.28));
       maxW = Math.min(availableW - rail - 40, 46 * 16);
-      maxH = window.innerHeight - 4.5 * 16;
+      maxH = viewportH - 4.5 * 16;
     } else if (isLandscape) {
       maxW = Math.min(availableW, window.innerWidth - 24, 64 * 16);
       // Leave room for nameplate + oversized first-name on mobile/landscape
-      maxH = window.innerHeight - 16 * 16;
+      maxH = viewportH - 16 * 16;
     } else {
       maxW = Math.min(availableW, 26.5 * 16);
-      maxH = window.innerHeight - 14 * 16;
+      maxH = viewportH - 14 * 16;
     }
 
     maxW = Math.max(80, maxW);
@@ -452,6 +466,7 @@
   function settleHeroIntro() {
     if (!heroStage || heroIntroDone) return;
     heroIntroDone = true;
+    heroMaxProgress = 1;
 
     heroStage.classList.add("is-intro-done");
     heroStage.style.setProperty("--hero-progress", "1");
@@ -498,7 +513,13 @@
       return;
     }
 
-    const range = heroStage.offsetHeight - window.innerHeight;
+    // Freeze the scrub range on first use: the mobile URL bar collapsing
+    // mid-scroll changes innerHeight, and a moving denominator makes the
+    // zoom visibly jump while scrolling down.
+    if (heroIntroRange <= 0) {
+      heroIntroRange = heroStage.offsetHeight - stableViewportHeight();
+    }
+    const range = heroIntroRange;
     const stageTop = heroStage.getBoundingClientRect().top;
     // Finish the zoom/reveal, then hold. Mobile landscape gets a longer hold.
     const mobileLandscape =
@@ -506,8 +527,13 @@
       window.matchMedia("(max-width: 959px)").matches;
     const SCRUB_END = mobileLandscape ? 0.58 : 0.78;
     const raw = range <= 0 ? 1 : clamp01(-stageTop / range);
-    const progress =
-      raw >= SCRUB_END ? 1 : clamp01(raw / SCRUB_END);
+    // One-way scrub: keep the furthest progress reached so scrolling back
+    // up never replays the full-bleed zoom (it's a page-load-only effect).
+    const progress = Math.max(
+      raw >= SCRUB_END ? 1 : clamp01(raw / SCRUB_END),
+      heroMaxProgress
+    );
+    heroMaxProgress = progress;
     heroStage.style.setProperty("--hero-progress", String(progress));
 
     if (progress >= 0.995) {
@@ -520,7 +546,6 @@
     if (!ensureHeroSlotSize()) {
       // Still show a full-bleed cover so landscape never looks blank.
       heroMedia.classList.add("is-scrubbing");
-      heroMedia.classList.remove("is-settling");
       heroMedia.style.left = pinRect.left + "px";
       heroMedia.style.top = pinRect.top + "px";
       heroMedia.style.width = pinRect.width + "px";
@@ -546,8 +571,10 @@
     const width = lerp(pinRect.width, endW, progress);
     const height = lerp(pinRect.height, endH, progress);
 
+    // Keep object-fit: cover the whole way — the end frame matches the
+    // image's aspect ratio, so the crop eases to zero instead of snapping
+    // to contain partway through (that snap read as a "jump").
     heroMedia.classList.add("is-scrubbing");
-    heroMedia.classList.toggle("is-settling", progress >= 0.9);
     heroMedia.style.left = left + "px";
     heroMedia.style.top = top + "px";
     heroMedia.style.width = width + "px";
@@ -562,7 +589,20 @@
     });
   }
 
+  let lastViewportW = window.innerWidth;
+  let lastViewportH = window.innerHeight;
+
   function onHeroScrubResize() {
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+    // Mobile URL bar show/hide fires resize while scrolling: same width,
+    // small height delta. Re-measuring the hero for those makes it change
+    // size mid-scroll, so keep everything as-is and just re-run the scrub.
+    const toolbarNudge =
+      vw === lastViewportW && Math.abs(vh - lastViewportH) < 200;
+    lastViewportW = vw;
+    lastViewportH = vh;
+
     // Mid-scrub: keep the cached end size and just re-lerp to the new pin/slot
     // (clearing fixed for a remeasure causes the scroll-off / jump-back glitch).
     if (
@@ -576,6 +616,11 @@
       scheduleHeroScrub();
       return;
     }
+    if (toolbarNudge) {
+      scheduleHeroScrub();
+      return;
+    }
+    if (!heroIntroDone) heroIntroRange = 0;
     clearHeroScrubStyles();
     clearHeroSlotSize();
     ensureHeroSlotSize();
@@ -677,6 +722,8 @@
     paintGalleries(resolvedPhotos);
 
     window.requestAnimationFrame(() => {
+      // Stage height may have changed with the hero orientation class.
+      if (!heroIntroDone) heroIntroRange = 0;
       clearHeroScrubStyles();
       clearHeroSlotSize();
       ensureHeroSlotSize();
